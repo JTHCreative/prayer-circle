@@ -44,6 +44,10 @@ function chunk(arr, size) {
   return out;
 }
 
+function clamp(value, lo, hi) {
+  return Math.max(lo, Math.min(hi, value));
+}
+
 export default function Circles() {
   const { user, refreshProfile } = useAuth();
   const [circles, setCircles] = useState([]);
@@ -117,13 +121,17 @@ export default function Circles() {
       const rect = container.getBoundingClientRect();
       const paused = !!selectedRef.current;
       for (const b of dataRef.current) {
-        if (!paused) {
+        if (!paused && !b.dragging) {
           b.x += b.vx;
           b.y += b.vy;
           if (b.x <= 0) { b.x = 0; b.vx = -b.vx; }
           if (b.x + b.size >= rect.width) { b.x = rect.width - b.size; b.vx = -b.vx; }
           if (b.y <= 0) { b.y = 0; b.vy = -b.vy; }
           if (b.y + b.size >= rect.height) { b.y = rect.height - b.size; b.vy = -b.vy; }
+          // Apply a little drag so flicks eventually settle to the
+          // ambient drift speed.
+          if (Math.abs(b.vx) > 0.5) b.vx *= 0.985;
+          if (Math.abs(b.vy) > 0.5) b.vy *= 0.985;
         }
         const el = bubbleRefs.current[b.id];
         if (el) el.style.transform = `translate(${b.x}px, ${b.y}px)`;
@@ -133,6 +141,86 @@ export default function Circles() {
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
   }, [circles]);
+
+  function handlePointerDown(e, circleId) {
+    // Only primary button / first touch
+    if (e.button !== undefined && e.button !== 0) return;
+    const b = dataRef.current.find((d) => d.id === circleId);
+    const container = containerRef.current;
+    if (!b || !container) return;
+    const rect = container.getBoundingClientRect();
+    b.dragging = true;
+    b.wasDragged = false;
+    b.dragStartX = e.clientX;
+    b.dragStartY = e.clientY;
+    b.dragOffsetX = e.clientX - rect.left - b.x;
+    b.dragOffsetY = e.clientY - rect.top - b.y;
+    b.lastX = b.x;
+    b.lastY = b.y;
+    b.lastT = performance.now();
+    b.releaseVx = 0;
+    b.releaseVy = 0;
+    b.vx = 0;
+    b.vy = 0;
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.add('dragging');
+  }
+
+  function handlePointerMove(e, circleId) {
+    const b = dataRef.current.find((d) => d.id === circleId);
+    const container = containerRef.current;
+    if (!b || !b.dragging || !container) return;
+    const rect = container.getBoundingClientRect();
+    const newX = clamp(e.clientX - rect.left - b.dragOffsetX, 0, rect.width - b.size);
+    const newY = clamp(e.clientY - rect.top - b.dragOffsetY, 0, rect.height - b.size);
+    const now = performance.now();
+    const dt = Math.max(1, now - b.lastT);
+    // Normalize to ~16ms frame so released speed matches the physics loop
+    b.releaseVx = ((newX - b.lastX) / dt) * 16;
+    b.releaseVy = ((newY - b.lastY) / dt) * 16;
+    b.x = newX;
+    b.y = newY;
+    b.lastX = newX;
+    b.lastY = newY;
+    b.lastT = now;
+    const dx = e.clientX - b.dragStartX;
+    const dy = e.clientY - b.dragStartY;
+    if (dx * dx + dy * dy > 25) b.wasDragged = true; // 5px threshold
+  }
+
+  function handlePointerUp(e, circleId) {
+    const b = dataRef.current.find((d) => d.id === circleId);
+    if (!b) return;
+    if (b.dragging) {
+      b.dragging = false;
+      const MAX = 4;
+      const vx = b.releaseVx || 0;
+      const vy = b.releaseVy || 0;
+      const speed = Math.hypot(vx, vy);
+      if (speed > MAX) {
+        b.vx = (vx / speed) * MAX;
+        b.vy = (vy / speed) * MAX;
+      } else {
+        b.vx = vx;
+        b.vy = vy;
+      }
+    }
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.remove('dragging');
+  }
+
+  function handleBubbleClick(circle) {
+    const b = dataRef.current.find((d) => d.id === circle.id);
+    if (b?.wasDragged) {
+      b.wasDragged = false;
+      return;
+    }
+    setSelected(circle);
+  }
 
   async function handleJoin(circle) {
     await updateDoc(doc(db, 'circles', circle.id), {
@@ -242,7 +330,11 @@ export default function Circles() {
                 height: size,
                 background: `radial-gradient(circle at 30% 25%, ${theme.from} 0%, ${theme.to} 100%)`
               }}
-              onClick={() => setSelected(c)}
+              onPointerDown={(e) => handlePointerDown(e, c.id)}
+              onPointerMove={(e) => handlePointerMove(e, c.id)}
+              onPointerUp={(e) => handlePointerUp(e, c.id)}
+              onPointerCancel={(e) => handlePointerUp(e, c.id)}
+              onClick={() => handleBubbleClick(c)}
               aria-label={`Open circle ${c.name}`}
             >
               <span className="circle-bubble-name">{c.name}</span>

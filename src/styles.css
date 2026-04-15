@@ -434,7 +434,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   align-items: center;
   justify-content: center;
   gap: 2px;
-  cursor: pointer;
+  cursor: grab;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.15;
@@ -446,6 +446,18 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   transition: box-shadow 180ms ease, filter 180ms ease;
   will-change: transform;
   letter-spacing: 0;
+  touch-action: none; /* own the drag gesture even on touch devices */
+  user-select: none;
+  -webkit-user-select: none;
+}
+.circle-bubble.dragging {
+  cursor: grabbing;
+  filter: brightness(1.1);
+  box-shadow:
+    0 18px 40px rgba(79, 70, 229, 0.4),
+    inset 0 -8px 24px rgba(0, 0, 0, 0.18),
+    inset 0 8px 24px rgba(255, 255, 255, 0.45);
+  z-index: 2;
 }
 .circle-bubble:hover {
   filter: brightness(1.08);
