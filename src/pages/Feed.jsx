@@ -139,31 +139,20 @@ export default function Feed() {
   return (
     <div className="home-split">
       <aside className={`feed-pane${collapsed ? ' collapsed' : ''}`}>
-        {collapsed && (
-          <button
-            type="button"
-            className="expand-btn"
-            onClick={() => setCollapsed(false)}
-            aria-label="Expand prayer feed"
-            title="Expand prayer feed"
-          >
-            ›
-          </button>
-        )}
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={() => setCollapsed((c) => !c)}
+          aria-label={collapsed ? 'Expand prayer feed' : 'Collapse prayer feed'}
+          title={collapsed ? 'Expand prayer feed' : 'Collapse prayer feed'}
+        >
+          <span className="sidebar-toggle-arrow">{collapsed ? '›' : '‹'}</span>
+        </button>
         <div className="feed-scroll" aria-hidden={collapsed}>
           <div className="feed-header">
             <h1>Prayer Feed</h1>
             <div className="feed-header-actions">
               <Link to="/new" className="btn-primary">+ New prayer</Link>
-              <button
-                type="button"
-                className="collapse-btn"
-                onClick={() => setCollapsed(true)}
-                aria-label="Collapse prayer feed"
-                title="Collapse prayer feed"
-              >
-                ‹
-              </button>
             </div>
           </div>
           <div className="tabs">
