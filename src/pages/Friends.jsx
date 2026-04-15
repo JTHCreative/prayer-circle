@@ -159,7 +159,10 @@ export default function Friends() {
                 incoming.some((i) => i.other?.id === u.id);
               return (
                 <li key={u.id} className="list-row">
-                  <span>{u.displayName}</span>
+                  <span>
+                    {u.displayName}
+                    {u.location && <small className="muted"> · 📍 {u.location}</small>}
+                  </span>
                   {isFriend ? (
                     <span className="pill">Friends</span>
                   ) : pending ? (
@@ -213,7 +216,10 @@ export default function Friends() {
           <ul className="list">
             {friends.map((f) => (
               <li key={f.id} className="list-row">
-                <span>{f.displayName}</span>
+                <span>
+                  {f.displayName}
+                  {f.location && <small className="muted"> · 📍 {f.location}</small>}
+                </span>
                 <button className="danger" onClick={() => removeFriend(f.id)}>Remove</button>
               </li>
             ))}

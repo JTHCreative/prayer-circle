@@ -19,9 +19,13 @@ export default function Layout() {
           <NavLink to="/new">New Prayer</NavLink>
           <NavLink to="/friends">Friends</NavLink>
           <NavLink to="/circles">Circles</NavLink>
+          <NavLink to="/profile">Profile</NavLink>
         </nav>
         <div className="topbar-right">
-          <span className="muted">{profile?.displayName}</span>
+          <span className="muted">
+            {profile?.displayName}
+            {profile?.location ? ` · ${profile.location}` : ''}
+          </span>
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>

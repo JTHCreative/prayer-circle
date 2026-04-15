@@ -6,7 +6,7 @@ import {
   signOut,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase.js';
 
 const AuthContext = createContext(null);
@@ -30,18 +30,39 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  async function signup(email, password, displayName) {
+  async function signup(email, password, displayName, location = '') {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await updateProfile(cred.user, { displayName });
     await setDoc(doc(db, 'users', cred.user.uid), {
       displayName,
       displayNameLower: displayName.toLowerCase(),
       email,
+      location: location.trim(),
       circleIds: [],
       friendIds: [],
       createdAt: serverTimestamp()
     });
     return cred.user;
+  }
+
+  async function updateUserProfile({ displayName, location }) {
+    if (!user) throw new Error('Not signed in');
+    const updates = {};
+    if (typeof displayName === 'string') {
+      const trimmed = displayName.trim();
+      if (trimmed.length < 2) throw new Error('Display name must be at least 2 characters.');
+      updates.displayName = trimmed;
+      updates.displayNameLower = trimmed.toLowerCase();
+    }
+    if (typeof location === 'string') {
+      updates.location = location.trim();
+    }
+    if (Object.keys(updates).length === 0) return;
+    await updateDoc(doc(db, 'users', user.uid), updates);
+    if (updates.displayName) {
+      await updateProfile(user, { displayName: updates.displayName });
+    }
+    await refreshProfile();
   }
 
   async function login(email, password) {
@@ -59,7 +80,7 @@ export function AuthProvider({ children }) {
     setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
   }
 
-  const value = { user, profile, loading, signup, login, logout, refreshProfile };
+  const value = { user, profile, loading, signup, login, logout, refreshProfile, updateUserProfile };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

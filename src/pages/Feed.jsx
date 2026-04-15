@@ -190,6 +190,9 @@ function PrayerCard({ prayer, currentUserId, onPray, onDelete }) {
     <li className="prayer-card">
       <div className="prayer-meta">
         <strong>{prayer.authorName || 'Someone'}</strong>
+        {prayer.authorLocation && (
+          <span className="muted">📍 {prayer.authorLocation}</span>
+        )}
         <span className="pill">{visibilityLabel}</span>
         {createdAt && <span className="muted">{createdAt.toLocaleString()}</span>}
       </div>

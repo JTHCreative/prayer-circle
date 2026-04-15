@@ -6,6 +6,7 @@ export default function Signup() {
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [displayName, setDisplayName] = useState('');
+  const [location, setLocation] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -20,7 +21,7 @@ export default function Signup() {
     }
     setBusy(true);
     try {
-      await signup(email, password, displayName.trim());
+      await signup(email, password, displayName.trim(), location);
       navigate('/');
     } catch (err) {
       setError(err.message);
@@ -36,6 +37,18 @@ export default function Signup() {
         <label>
           Display name
           <input value={displayName} onChange={(e) => setDisplayName(e.target.value)} required />
+        </label>
+        <label>
+          General location <span className="muted">(optional)</span>
+          <input
+            value={location}
+            onChange={(e) => setLocation(e.target.value)}
+            placeholder="e.g. San Francisco Bay Area, Tokyo, Bangladesh"
+            maxLength={80}
+          />
+          <small className="muted">
+            A general region — please don't enter a street address.
+          </small>
         </label>
         <label>
           Email

@@ -101,7 +101,10 @@ export default function CircleDetail() {
         <ul className="list">
           {members.map((m) => (
             <li key={m.id} className="list-row">
-              <span>{m.displayName}</span>
+              <span>
+                {m.displayName}
+                {m.location && <small className="muted"> · 📍 {m.location}</small>}
+              </span>
               {m.id === circle.createdBy && <span className="pill">Creator</span>}
             </li>
           ))}
@@ -118,6 +121,9 @@ export default function CircleDetail() {
               <li key={p.id} className="prayer-card">
                 <div className="prayer-meta">
                   <strong>{p.authorName}</strong>
+                  {p.authorLocation && (
+                    <span className="muted">📍 {p.authorLocation}</span>
+                  )}
                   {p.createdAt?.toDate && (
                     <span className="muted">{p.createdAt.toDate().toLocaleString()}</span>
                   )}
