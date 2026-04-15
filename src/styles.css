@@ -139,10 +139,47 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   box-shadow: 0 1px 0 rgba(37, 99, 235, 0.04);
 }
 .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
-.nav { display: flex; gap: 16px; flex: 1; }
-.nav a { color: var(--text); font-size: 14px; padding: 6px 0; }
-.nav a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+.nav { display: flex; gap: 10px; flex: 1; align-items: center; }
 .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+/* Header nav buttons — same gradient-pill styling as .btn-primary, with icons */
+.nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--btn-text);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
+  text-decoration: none;
+  transition: transform 120ms ease, box-shadow 180ms ease, background 180ms ease, color 180ms ease;
+}
+.nav-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--btn-glow);
+  background:
+    linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
+    var(--btn-gradient) border-box;
+  text-decoration: none;
+}
+.nav-btn.active {
+  color: #fff;
+  background: var(--btn-gradient);
+  border-color: transparent;
+  box-shadow: 0 0 18px rgba(139, 92, 246, 0.32);
+}
+.nav-btn.active:hover {
+  background: var(--btn-gradient);
+  filter: brightness(1.05);
+}
+.nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
 .container { max-width: 760px; margin: 0 auto; padding: 24px; width: 100%; }
 .container-wide { max-width: 1400px; }
