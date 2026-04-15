@@ -1,173 +1,132 @@
-// Bible verses about prayer. Deliberately kept short enough to fit on a
-// banner card at a readable size.
+// Bible verses about prayer (ESV). Organized into four themes.
+// The rotation simply iterates through the array one per day.
 export const PRAYER_VERSES = [
+  // --- Instructions and Guidance on How to Pray ---
   {
-    text: 'Do not be anxious about anything, but in every situation, by prayer and petition, present your requests to God.',
-    reference: 'Philippians 4:6'
+    text: 'But when you pray, go into your room and shut the door and pray to your Father who is in secret. And your Father who sees in secret will reward you.',
+    reference: 'Matthew 6:6'
   },
   {
-    text: 'Ask and it will be given to you; seek and you will find; knock and the door will be opened to you.',
-    reference: 'Matthew 7:7'
+    text: 'And when you pray, do not heap up empty phrases as the Gentiles do, for they think that they will be heard for their many words.',
+    reference: 'Matthew 6:7'
   },
   {
-    text: 'The prayer of a righteous person is powerful and effective.',
-    reference: 'James 5:16'
+    text: 'Our Father in heaven, hallowed be your name. Your kingdom come, your will be done, on earth as it is in heaven.',
+    reference: 'Matthew 6:9\u201313'
   },
   {
-    text: 'Rejoice always, pray continually, give thanks in all circumstances.',
-    reference: '1 Thessalonians 5:16-18'
+    text: 'Rejoice always, pray without ceasing, give thanks in all circumstances; for this is the will of God in Christ Jesus for you.',
+    reference: '1 Thessalonians 5:16\u201318'
   },
   {
-    text: 'Whatever you ask for in prayer, believe that you have received it, and it will be yours.',
-    reference: 'Mark 11:24'
-  },
-  {
-    text: 'Be joyful in hope, patient in affliction, faithful in prayer.',
-    reference: 'Romans 12:12'
-  },
-  {
-    text: 'Devote yourselves to prayer, being watchful and thankful.',
+    text: 'Continue steadfastly in prayer, being watchful in it with thanksgiving.',
     reference: 'Colossians 4:2'
   },
   {
-    text: 'Cast all your anxiety on him because he cares for you.',
-    reference: '1 Peter 5:7'
+    text: 'Rejoice in hope, be patient in tribulation, be constant in prayer.',
+    reference: 'Romans 12:12'
+  },
+  {
+    text: 'But I say to you who hear, Love your enemies, do good to those who hate you, bless those who curse you, pray for those who abuse you.',
+    reference: 'Luke 6:27\u201328'
+  },
+  {
+    text: 'I desire then that in every place the men should pray, lifting holy hands without anger or quarreling.',
+    reference: '1 Timothy 2:8'
+  },
+
+  // --- Promises and God\u2019s Response ---
+  {
+    text: 'Then you will call upon me and come and pray to me, and I will hear you.',
+    reference: 'Jeremiah 29:12'
+  },
+  {
+    text: 'Call to me and I will answer you, and will tell you great and hidden things that you have not known.',
+    reference: 'Jeremiah 33:3'
+  },
+  {
+    text: 'Ask, and it will be given to you; seek, and you will find; knock, and it will be opened to you.',
+    reference: 'Matthew 7:7'
+  },
+  {
+    text: 'And this is the confidence that we have toward him, that if we ask anything according to his will he hears us.',
+    reference: '1 John 5:14'
   },
   {
     text: 'The Lord is near to all who call on him, to all who call on him in truth.',
     reference: 'Psalm 145:18'
   },
   {
-    text: 'Call to me and I will answer you and tell you great and unsearchable things you do not know.',
-    reference: 'Jeremiah 33:3'
+    text: 'The Lord is far from the wicked, but he hears the prayer of the righteous.',
+    reference: 'Proverbs 15:29'
   },
   {
-    text: 'Let us then approach God\u2019s throne of grace with confidence, so that we may receive mercy.',
-    reference: 'Hebrews 4:16'
-  },
-  {
-    text: 'The Spirit helps us in our weakness. We do not know what we ought to pray for, but the Spirit himself intercedes for us.',
-    reference: 'Romans 8:26'
-  },
-  {
-    text: 'If any of you lacks wisdom, you should ask God, who gives generously to all without finding fault.',
-    reference: 'James 1:5'
-  },
-  {
-    text: 'This is the confidence we have in approaching God: that if we ask anything according to his will, he hears us.',
-    reference: '1 John 5:14'
-  },
-  {
-    text: 'The righteous cry out, and the Lord hears them; he delivers them from all their troubles.',
+    text: 'When the righteous cry for help, the Lord hears and delivers them out of all their troubles.',
     reference: 'Psalm 34:17'
   },
   {
-    text: 'Pray in the Spirit on all occasions with all kinds of prayers and requests.',
-    reference: 'Ephesians 6:18'
+    text: 'If my people who are called by my name humble themselves, and pray and seek my face and turn from their wicked ways, then I will hear from heaven and will forgive their sin and heal their land.',
+    reference: '2 Chronicles 7:14'
+  },
+
+  // --- Faith and Persistence ---
+  {
+    text: 'Therefore I tell you, whatever you ask in prayer, believe that you have received it, and it will be yours.',
+    reference: 'Mark 11:24'
   },
   {
-    text: 'When you pray, go into your room, close the door and pray to your Father, who is unseen.',
-    reference: 'Matthew 6:6'
+    text: 'And whatever you ask in prayer, you will receive, if you have faith.',
+    reference: 'Matthew 21:22'
   },
   {
-    text: 'If you remain in me and my words remain in you, ask whatever you wish, and it will be done for you.',
+    text: 'Therefore, confess your sins to one another and pray for one another, that you may be healed. The prayer of a righteous person has great power as it is working.',
+    reference: 'James 5:16'
+  },
+  {
+    text: 'And he told them a parable to the effect that they ought always to pray and not lose heart.',
+    reference: 'Luke 18:1'
+  },
+  {
+    text: 'If you abide in me, and my words abide in you, ask whatever you wish, and it will be done for you.',
     reference: 'John 15:7'
   },
   {
-    text: 'Before they call I will answer; while they are still speaking I will hear.',
-    reference: 'Isaiah 65:24'
+    text: 'If any of you lacks wisdom, let him ask God, who gives generously to all without reproach, and it will be given him.',
+    reference: 'James 1:5'
+  },
+
+  // --- Peace, Strength, and the Holy Spirit ---
+  {
+    text: 'Do not be anxious about anything, but in everything by prayer and supplication with thanksgiving let your requests be made known to God. And the peace of God, which surpasses all understanding, will guard your hearts and your minds in Christ Jesus.',
+    reference: 'Philippians 4:6\u20137'
   },
   {
-    text: 'In the morning, Lord, you hear my voice; in the morning I lay my requests before you and wait expectantly.',
+    text: 'Likewise the Spirit helps us in our weakness. For we do not know what to pray for as we ought, but the Spirit himself intercedes for us with groanings too deep for words.',
+    reference: 'Romans 8:26'
+  },
+  {
+    text: 'Let us then with confidence draw near to the throne of grace, that we may receive mercy and find grace to help in time of need.',
+    reference: 'Hebrews 4:16'
+  },
+  {
+    text: 'Watch and pray that you may not enter into temptation. The spirit indeed is willing, but the flesh is weak.',
+    reference: 'Matthew 26:41'
+  },
+  {
+    text: 'O Lord, in the morning you hear my voice; in the morning I prepare a sacrifice for you and watch.',
     reference: 'Psalm 5:3'
   },
   {
-    text: 'Evening, morning and noon I cry out in distress, and he hears my voice.',
-    reference: 'Psalm 55:17'
-  },
-  {
-    text: 'Is anyone among you in trouble? Let them pray. Is anyone happy? Let them sing songs of praise.',
-    reference: 'James 5:13'
-  },
-  {
-    text: 'Then you will call on me and come and pray to me, and I will listen to you.',
-    reference: 'Jeremiah 29:12'
-  },
-  {
-    text: 'Praise be to God, who has not rejected my prayer or withheld his love from me.',
-    reference: 'Psalm 66:20'
-  },
-  {
-    text: 'I call on you, my God, for you will answer me; turn your ear to me and hear my prayer.',
+    text: 'I call upon you, for you will answer me, O God; incline your ear to me; hear my words.',
     reference: 'Psalm 17:6'
   },
   {
-    text: 'Again, truly I tell you that if two of you on earth agree about anything they ask for, it will be done for them.',
-    reference: 'Matthew 18:19'
+    text: 'Seek the Lord and his strength; seek his presence continually!',
+    reference: '1 Chronicles 16:11'
   },
   {
-    text: 'If my people, who are called by my name, will humble themselves and pray, then I will hear from heaven.',
-    reference: '2 Chronicles 7:14'
-  },
-  {
-    text: 'Answer me when I call to you, my righteous God. Give me relief from my distress; have mercy on me and hear my prayer.',
-    reference: 'Psalm 4:1'
-  },
-  {
-    text: 'Be still, and know that I am God.',
-    reference: 'Psalm 46:10'
-  },
-  {
-    text: 'He will respond to the prayer of the destitute; he will not despise their plea.',
-    reference: 'Psalm 102:17'
-  },
-  {
-    text: 'Trust in the Lord with all your heart and lean not on your own understanding.',
-    reference: 'Proverbs 3:5'
-  },
-  {
-    text: 'Draw near to God, and he will draw near to you.',
-    reference: 'James 4:8'
-  },
-  {
-    text: 'The Lord has heard my cry for mercy; the Lord accepts my prayer.',
-    reference: 'Psalm 6:9'
-  },
-  {
-    text: 'May my prayer be set before you like incense; may the lifting up of my hands be like the evening sacrifice.',
-    reference: 'Psalm 141:2'
-  },
-  {
-    text: 'Let the morning bring me word of your unfailing love, for I have put my trust in you.',
-    reference: 'Psalm 143:8'
-  },
-  {
-    text: 'Come to me, all you who are weary and burdened, and I will give you rest.',
-    reference: 'Matthew 11:28'
-  },
-  {
-    text: 'Our Father in heaven, hallowed be your name, your kingdom come, your will be done.',
-    reference: 'Matthew 6:9-10'
-  },
-  {
-    text: 'Seek the Lord while he may be found; call on him while he is near.',
-    reference: 'Isaiah 55:6'
-  },
-  {
-    text: 'The Lord is my shepherd, I lack nothing.',
-    reference: 'Psalm 23:1'
-  },
-  {
-    text: 'He heals the brokenhearted and binds up their wounds.',
-    reference: 'Psalm 147:3'
-  },
-  {
-    text: 'For where two or three gather in my name, there am I with them.',
-    reference: 'Matthew 18:20'
-  },
-  {
-    text: 'If you believe, you will receive whatever you ask for in prayer.',
-    reference: 'Matthew 21:22'
+    text: 'For the eyes of the Lord are on the righteous, and his ears are open to their prayer.',
+    reference: '1 Peter 3:12'
   }
 ];
 
