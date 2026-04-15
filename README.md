@@ -97,26 +97,19 @@ firebase deploy --only firestore:rules,firestore:indexes
 ## Deploy the site to GitHub Pages
 
 The app is wired for GitHub Pages via a workflow in
-`.github/workflows/deploy.yml`. **One-time setup:**
+`.github/workflows/deploy.yml`. Firebase web config is hardcoded in
+`src/firebase.js` (safe to commit — these values identify the project,
+they don't authenticate anyone), so deploys work without any repo
+secrets. **One-time setup:**
 
 1. **Enable Pages** — repo Settings → Pages → *Source: GitHub Actions*.
-2. **Add repo secrets** — repo Settings → Secrets and variables →
-   Actions → New repository secret. Paste the same values from your
-   local `.env` into seven secrets:
-   - `VITE_FIREBASE_API_KEY`
-   - `VITE_FIREBASE_AUTH_DOMAIN`
-   - `VITE_FIREBASE_PROJECT_ID`
-   - `VITE_FIREBASE_STORAGE_BUCKET`
-   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
-   - `VITE_FIREBASE_APP_ID`
-   - `VITE_FIREBASE_MEASUREMENT_ID`
-3. **Authorize the Pages domain in Firebase Auth** — Firebase Console
+2. **Authorize the Pages domain in Firebase Auth** — Firebase Console
    → Authentication → Settings → Authorized domains → add
    `<your-user>.github.io`. Without this, sign-in throws
    `auth/unauthorized-domain`.
 
-After those three steps, every push to `main` (or a manual
-*Run workflow* from the Actions tab) builds and publishes the site to
+After those two steps, every push to `main` (or a manual *Run
+workflow* from the Actions tab) builds and publishes the site to
 `https://<your-user>.github.io/prayer-circle/`.
 
 ### Notes specific to Pages

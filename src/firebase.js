@@ -3,14 +3,18 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getAnalytics, isSupported as analyticsIsSupported } from 'firebase/analytics';
 
+// Firebase web config. Safe to commit to a public repo — these values
+// identify the project, they don't authenticate anyone. Security is
+// enforced by Firestore rules and Firebase Auth, not by hiding these.
+// Docs: https://firebase.google.com/docs/projects/api-keys
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+  apiKey: 'AIzaSyAECEMTo-iWmiJ6Q7NWiSPPT1aYfJ5DfQs',
+  authDomain: 'prayer-circle-a9b3d.firebaseapp.com',
+  projectId: 'prayer-circle-a9b3d',
+  storageBucket: 'prayer-circle-a9b3d.firebasestorage.app',
+  messagingSenderId: '662483850965',
+  appId: '1:662483850965:web:fae434d738d527ccec745c',
+  measurementId: 'G-06DFMNMDRB'
 };
 
 export const app = initializeApp(firebaseConfig);
