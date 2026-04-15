@@ -19,6 +19,13 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
 import Globe from '../components/Globe.jsx';
 import DailyVerseCard from '../components/DailyVerseCard.jsx';
+import {
+  CircleVisibilityIcon,
+  LockIcon,
+  PrayIcon,
+  PublicIcon,
+  TrashIcon
+} from '../components/icons.jsx';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -202,20 +209,41 @@ export default function Feed() {
 function PrayerCard({ prayer, currentUserId, onPray, onDelete }) {
   const prayed = prayer.prayedBy?.includes(currentUserId);
   const mine = prayer.authorId === currentUserId;
-  const visibilityLabel = useMemo(() => {
+
+  const visibility = useMemo(() => {
     switch (prayer.visibility) {
-      case 'public': return 'Public';
-      case 'friend': return 'Private (friend)';
-      case 'circles': return 'Circle';
-      default: return prayer.visibility;
+      case 'public':
+        return { Icon: PublicIcon, label: 'Public' };
+      case 'circles': {
+        const names = prayer.circleNames || [];
+        const main = names[0] || 'Circle';
+        const extra = names.length > 1 ? ` +${names.length - 1}` : '';
+        return { Icon: CircleVisibilityIcon, label: `${main}${extra}` };
+      }
+      case 'friend': {
+        // Show the @username of whoever is "on the other side" of the
+        // private prayer: for the recipient this is the author, for the
+        // author this is the target.
+        const isRecipient = prayer.targetUserId === currentUserId;
+        const handle = isRecipient
+          ? prayer.authorUsername
+          : prayer.targetUsername;
+        return {
+          Icon: LockIcon,
+          label: handle ? `@${handle}` : 'Private'
+        };
+      }
+      default:
+        return { Icon: LockIcon, label: prayer.visibility };
     }
-  }, [prayer.visibility]);
+  }, [prayer, currentUserId]);
 
   const createdAt = prayer.createdAt?.toDate?.();
+  const dateLabel = createdAt ? formatDate(createdAt) : '';
 
   return (
     <li className="prayer-card">
-      <div className="prayer-header">
+      <div className="prayer-card-header">
         <Avatar
           user={{
             displayName: prayer.authorName,
@@ -224,27 +252,61 @@ function PrayerCard({ prayer, currentUserId, onPray, onDelete }) {
           }}
           size={40}
         />
-        <div className="prayer-meta">
-          <strong>{prayer.authorName || 'Someone'}</strong>
-          {prayer.authorUsername && (
-            <span className="muted">@{prayer.authorUsername}</span>
-          )}
-          {prayer.authorLocation && (
-            <span className="muted">📍 {prayer.authorLocation}</span>
-          )}
-          <span className="pill">{visibilityLabel}</span>
-          {createdAt && <span className="muted">{createdAt.toLocaleString()}</span>}
+        <div className="prayer-identity">
+          <span className="prayer-handle">
+            @{prayer.authorUsername || 'user'}
+          </span>
+          <span className="prayer-name">{prayer.authorName || 'Someone'}</span>
         </div>
+        <div className="prayer-visibility" title={`Visibility: ${visibility.label}`}>
+          <visibility.Icon size={16} />
+          <span>{visibility.label}</span>
+        </div>
+        {dateLabel && <time className="prayer-date">{dateLabel}</time>}
       </div>
+
       <p className="prayer-text">{prayer.text}</p>
-      <div className="prayer-actions">
-        <button onClick={onPray} className={prayed ? 'prayed' : ''}>
-          {prayed ? '🙏 Prayed' : '🙏 Pray'} {prayer.prayedCount ? `(${prayer.prayedCount})` : ''}
+
+      <div className="prayer-footer">
+        <button
+          type="button"
+          onClick={onPray}
+          className={prayed ? 'pray-btn prayed' : 'pray-btn'}
+        >
+          <PrayIcon size={16} />
+          <span>{prayed ? 'Prayed' : 'Pray'}</span>
+          {prayer.prayedCount ? (
+            <span className="pray-count">{prayer.prayedCount}</span>
+          ) : null}
         </button>
-        {mine && <button className="danger" onClick={onDelete}>Delete</button>}
+        {mine && (
+          <button
+            type="button"
+            className="trash-btn"
+            onClick={onDelete}
+            aria-label="Delete prayer"
+            title="Delete prayer"
+          >
+            <TrashIcon size={16} />
+          </button>
+        )}
       </div>
     </li>
   );
+}
+
+// Compact "Apr 14, 10:27 PM" format used in prayer-card headers.
+function formatDate(date) {
+  try {
+    return date.toLocaleString(undefined, {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  } catch {
+    return date.toLocaleString();
+  }
 }
 
 function chunk(arr, size) {

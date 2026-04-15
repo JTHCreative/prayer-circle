@@ -81,6 +81,11 @@ export default function NewPrayer() {
 
     setBusy(true);
     try {
+      // Snapshot display info for the chosen target/circles so feed cards
+      // can render immediately without a follow-up lookup.
+      const selectedCircles = circles.filter((c) => selectedCircleIds.includes(c.id));
+      const targetFriend = friends.find((f) => f.id === targetUserId);
+
       const base = {
         text: text.trim(),
         authorId: user.uid,
@@ -90,7 +95,13 @@ export default function NewPrayer() {
         authorUsername: profile?.username ?? '',
         visibility,
         targetUserId: visibility === 'friend' ? targetUserId : null,
+        targetUsername: visibility === 'friend' ? (targetFriend?.username ?? '') : '',
+        targetName: visibility === 'friend' ? (targetFriend?.displayName ?? '') : '',
         circleIds: visibility === 'circles' ? selectedCircleIds : [],
+        circleNames:
+          visibility === 'circles'
+            ? selectedCircles.map((c) => c.name).filter(Boolean)
+            : [],
         prayedBy: [],
         prayedCount: 0,
         createdAt: serverTimestamp()

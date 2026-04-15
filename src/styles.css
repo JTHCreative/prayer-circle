@@ -257,12 +257,100 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .prayer-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 16px;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow);
 }
-.prayer-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
-.prayer-header .prayer-meta { margin-bottom: 0; flex: 1; }
-.prayer-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+
+/* Header row: avatar + identity + visibility chip + date */
+.prayer-card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px 4px;
+  flex-wrap: wrap;
+}
+.prayer-identity {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.prayer-handle { font-size: 14px; font-weight: 700; color: var(--text); }
+.prayer-name { font-size: 12px; color: var(--muted); }
+
+.prayer-visibility {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 600;
+  max-width: 180px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.prayer-visibility svg { flex-shrink: 0; }
+
+.prayer-date {
+  margin-left: auto;
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* Footer with accent background */
+.prayer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 14px;
+  background: linear-gradient(90deg, var(--primary-soft) 0%, #f2f0ff 100%);
+  border-top: 1px solid var(--border);
+}
+.pray-btn,
+.trash-btn {
+  padding: 7px 14px;
+  font-size: 13px;
+  gap: 6px;
+}
+.trash-btn {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  color: var(--danger);
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient-danger) border-box;
+}
+.trash-btn:hover {
+  color: var(--danger);
+  background:
+    linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
+    var(--btn-gradient-danger) border-box;
+}
+
+/* Small count chip next to the pray button */
+.pray-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  padding: 0 6px;
+  height: 18px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--btn-gradient);
+  color: #fff;
+}
+.pray-btn.prayed .pray-count { background: rgba(255, 255, 255, 0.28); color: #fff; }
+
 .person { display: inline-flex; align-items: center; gap: 10px; }
 
 /* Home layout: collapsible feed sidebar on the left + full-bleed globe on the right.
@@ -495,8 +583,13 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   .sidebar-toggle-arrow { transform: rotate(90deg); }
   .globe-pane { flex: 1 1 auto; min-height: 360px; }
 }
-.prayer-text { white-space: pre-wrap; margin: 8px 0; }
-.prayer-actions { display: flex; gap: 8px; margin-top: 10px; }
+.prayer-text {
+  white-space: pre-wrap;
+  margin: 0;
+  padding: 6px 14px 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
 
 .pill {
   background: var(--pill-bg);

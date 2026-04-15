@@ -124,7 +124,7 @@ export default function CircleDetail() {
           <ul className="prayer-list">
             {prayers.map((p) => (
               <li key={p.id} className="prayer-card">
-                <div className="prayer-header">
+                <div className="prayer-card-header">
                   <Avatar
                     user={{
                       displayName: p.authorName,
@@ -133,18 +133,22 @@ export default function CircleDetail() {
                     }}
                     size={40}
                   />
-                  <div className="prayer-meta">
-                    <strong>{p.authorName}</strong>
-                    {p.authorUsername && (
-                      <span className="muted">@{p.authorUsername}</span>
-                    )}
-                    {p.authorLocation && (
-                      <span className="muted">📍 {p.authorLocation}</span>
-                    )}
-                    {p.createdAt?.toDate && (
-                      <span className="muted">{p.createdAt.toDate().toLocaleString()}</span>
-                    )}
+                  <div className="prayer-identity">
+                    <span className="prayer-handle">
+                      @{p.authorUsername || 'user'}
+                    </span>
+                    <span className="prayer-name">{p.authorName || 'Someone'}</span>
                   </div>
+                  {p.createdAt?.toDate && (
+                    <time className="prayer-date">
+                      {p.createdAt.toDate().toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </time>
+                  )}
                 </div>
                 <p className="prayer-text">{p.text}</p>
               </li>
