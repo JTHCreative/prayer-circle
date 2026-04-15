@@ -38,7 +38,7 @@ export default function Layout() {
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>
-      <main className={wide ? 'container container-wide' : 'container'}>
+      <main className={wide ? 'container container-home' : 'container'}>
         <Outlet />
       </main>
     </div>

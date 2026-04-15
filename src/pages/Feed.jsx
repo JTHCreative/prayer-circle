@@ -32,6 +32,7 @@ export default function Feed() {
   const [tab, setTab] = useState('all');
   const [prayers, setPrayers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -137,40 +138,64 @@ export default function Feed() {
 
   return (
     <div className="home-split">
-      <aside className="feed-pane">
-        <div className="feed-header">
-          <h1>Prayer feed</h1>
-          <Link to="/new" className="btn-primary">+ New prayer</Link>
-        </div>
-        <div className="tabs">
-          {TABS.map((t) => (
-            <button
-              key={t.key}
-              className={tab === t.key ? 'tab active' : 'tab'}
-              onClick={() => setTab(t.key)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <p className="muted">Loading prayers…</p>
-        ) : prayers.length === 0 ? (
-          <p className="muted">No prayers here yet. <Link to="/new">Share one?</Link></p>
-        ) : (
-          <ul className="prayer-list">
-            {prayers.map((p) => (
-              <PrayerCard
-                key={p.id}
-                prayer={p}
-                currentUserId={user.uid}
-                onPray={() => togglePrayed(p)}
-                onDelete={() => handleDelete(p)}
-              />
-            ))}
-          </ul>
+      <aside className={`feed-pane${collapsed ? ' collapsed' : ''}`}>
+        {collapsed && (
+          <button
+            type="button"
+            className="expand-btn"
+            onClick={() => setCollapsed(false)}
+            aria-label="Expand prayer feed"
+            title="Expand prayer feed"
+          >
+            ›
+          </button>
         )}
+        <div className="feed-scroll" aria-hidden={collapsed}>
+          <div className="feed-header">
+            <h1>Prayer feed</h1>
+            <div className="feed-header-actions">
+              <Link to="/new" className="btn-primary">+ New prayer</Link>
+              <button
+                type="button"
+                className="collapse-btn"
+                onClick={() => setCollapsed(true)}
+                aria-label="Collapse prayer feed"
+                title="Collapse prayer feed"
+              >
+                ‹
+              </button>
+            </div>
+          </div>
+          <div className="tabs">
+            {TABS.map((t) => (
+              <button
+                key={t.key}
+                className={tab === t.key ? 'tab active' : 'tab'}
+                onClick={() => setTab(t.key)}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          {loading ? (
+            <p className="muted">Loading prayers…</p>
+          ) : prayers.length === 0 ? (
+            <p className="muted">No prayers here yet. <Link to="/new">Share one?</Link></p>
+          ) : (
+            <ul className="prayer-list">
+              {prayers.map((p) => (
+                <PrayerCard
+                  key={p.id}
+                  prayer={p}
+                  currentUserId={user.uid}
+                  onPray={() => togglePrayed(p)}
+                  onDelete={() => handleDelete(p)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
       </aside>
 
       <section className="globe-pane" aria-label="Interactive globe">
