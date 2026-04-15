@@ -23,6 +23,15 @@ service cloud.firestore {
       match /prayerBook/{prayerId} {
         allow read, write: if isSelf(userId);
       }
+
+      // Personal notifications. Any signed-in user can create a
+      // notification for another user (e.g. "your circle was deleted"),
+      // but only the recipient can read, update, or delete them.
+      match /notifications/{notifId} {
+        allow read: if isSelf(userId);
+        allow create: if isSignedIn();
+        allow update, delete: if isSelf(userId);
+      }
     }
 
     // Username reservations. Doc id is the lowercased username. A user may

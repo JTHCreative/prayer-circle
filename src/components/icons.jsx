@@ -67,6 +67,16 @@ export function TrashIcon(props) {
   );
 }
 
+// Bell — used for the notifications button in the top bar
+export function BellIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2.5H4.5L6 16z" />
+      <path d="M10 19.5a2 2 0 0 0 4 0" />
+    </Svg>
+  );
+}
+
 // Open book — used for the Prayer Book nav link
 export function BookIcon(props) {
   return (

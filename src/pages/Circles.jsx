@@ -4,12 +4,14 @@ import {
   arrayRemove,
   arrayUnion,
   collection,
+  deleteDoc,
   doc,
   documentId,
   getDocs,
   orderBy,
   query,
   serverTimestamp,
+  setDoc,
   updateDoc,
   where
 } from 'firebase/firestore';
@@ -49,7 +51,7 @@ function clamp(value, lo, hi) {
 }
 
 export default function Circles() {
-  const { user, refreshProfile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
@@ -322,6 +324,55 @@ export default function Circles() {
     );
   }
 
+  async function handleDelete(circle) {
+    if (circle.createdBy !== user.uid) return;
+    const memberCount = (circle.members || []).length;
+    const extra =
+      memberCount > 1
+        ? ` ${memberCount - 1} other member${memberCount - 1 === 1 ? '' : 's'} will be notified.`
+        : '';
+    if (!confirm(`Delete "${circle.name}"?${extra}\nThis cannot be undone.`)) {
+      return;
+    }
+
+    // Notify every other member before the circle doc disappears.
+    const otherMembers = (circle.members || []).filter((id) => id !== user.uid);
+    const notifWrites = otherMembers.map((memberId) =>
+      setDoc(
+        doc(db, 'users', memberId, 'notifications', `circle-deleted-${circle.id}`),
+        {
+          type: 'circle_deleted',
+          title: 'Prayer circle deleted',
+          body: `"${circle.name}" was removed by @${
+            profile?.username || 'the owner'
+          }.`,
+          circleId: circle.id,
+          circleName: circle.name,
+          fromUserId: user.uid,
+          fromName: profile?.displayName || '',
+          fromUsername: profile?.username || '',
+          read: false,
+          createdAt: serverTimestamp()
+        }
+      )
+    );
+    await Promise.all(notifWrites);
+
+    // Delete the circle document. Other members still have the stale id
+    // in their users/{uid}.circleIds, but UI that fetches circles will
+    // just silently drop any that no longer exist.
+    await deleteDoc(doc(db, 'circles', circle.id));
+
+    // Clean up the creator's own circleIds list.
+    await updateDoc(doc(db, 'users', user.uid), {
+      circleIds: arrayRemove(circle.id)
+    });
+    await refreshProfile();
+
+    setCircles((prev) => prev.filter((c) => c.id !== circle.id));
+    setSelected(null);
+  }
+
   async function handleCreate({ name, description }) {
     const ref = await addDoc(collection(db, 'circles'), {
       name: name.trim(),
@@ -479,6 +530,18 @@ export default function Circles() {
                         }}
                       >
                         Join
+                      </button>
+                    )}
+                    {c.createdBy === user.uid && (
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(c);
+                        }}
+                      >
+                        Delete circle
                       </button>
                     )}
                   </div>

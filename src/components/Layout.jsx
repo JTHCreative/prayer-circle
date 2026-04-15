@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
+import NotificationsMenu from './NotificationsMenu.jsx';
 import { BookIcon, CircleVisibilityIcon, PublicIcon } from './icons.jsx';
 
 function IconNewPrayer() {
@@ -48,6 +49,7 @@ export default function Layout() {
           </NavLink>
         </nav>
         <div className="topbar-right">
+          <NotificationsMenu />
           <Link to="/settings" className="profile-chip" title="Account settings">
             <Avatar user={profile} size={32} />
             <span className="profile-chip-text">
