@@ -18,8 +18,8 @@ import {
   setDoc,
   updateDoc
 } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { auth, db, storage } from '../firebase.js';
+import { auth, db } from '../firebase.js';
+import { fileToResizedDataUrl } from '../utils/image.js';
 
 const AuthContext = createContext(null);
 
@@ -197,34 +197,32 @@ export function AuthProvider({ children }) {
     await refreshProfile();
   }
 
+  // Store the avatar as a resized JPEG data URL directly in the user doc.
+  // Keeps us on the Firebase free tier (no Storage required) and cheap to
+  // read because it's part of the document we're already fetching.
   async function uploadAvatar(file) {
     if (!auth.currentUser) throw new Error('Not signed in');
-    if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
-    if (file.size > 5 * 1024 * 1024) throw new Error('Image must be under 5 MB.');
+    const dataUrl = await fileToResizedDataUrl(file);
 
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}/avatar.${ext}`);
-    await uploadBytes(storageRef, file, { contentType: file.type });
-    const url = await getDownloadURL(storageRef);
-
-    await updateDoc(doc(db, 'users', auth.currentUser.uid), { photoURL: url });
-    await updateProfile(auth.currentUser, { photoURL: url });
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), { photoURL: dataUrl });
+    // updateProfile silently drops data: URLs longer than ~2KB, so wrap.
+    try {
+      await updateProfile(auth.currentUser, { photoURL: dataUrl });
+    } catch {
+      /* Firebase Auth profile photo is optional; ignore if it rejects the size */
+    }
     await refreshProfile();
-    return url;
+    return dataUrl;
   }
 
   async function removeAvatar() {
     if (!auth.currentUser) throw new Error('Not signed in');
-    // Try to delete known extensions. Failures are fine (file may not exist).
-    for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
-      try {
-        await deleteObject(ref(storage, `avatars/${auth.currentUser.uid}/avatar.${ext}`));
-      } catch {
-        /* ignore */
-      }
-    }
     await updateDoc(doc(db, 'users', auth.currentUser.uid), { photoURL: '' });
-    await updateProfile(auth.currentUser, { photoURL: null });
+    try {
+      await updateProfile(auth.currentUser, { photoURL: null });
+    } catch {
+      /* ignore */
+    }
     await refreshProfile();
   }
 

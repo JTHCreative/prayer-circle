@@ -145,7 +145,10 @@ export default function Settings() {
                 </button>
               )}
             </div>
-            <small className="muted">JPG, PNG, or WebP. Under 5 MB.</small>
+            <small className="muted">
+              JPG, PNG, or WebP. Images are resized to 256×256 in your browser
+              before being saved.
+            </small>
             {avatarError && <p className="error">{avatarError}</p>}
             {avatarStatus && <p className="muted">{avatarStatus}</p>}
           </div>
