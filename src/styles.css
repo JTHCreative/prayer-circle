@@ -576,6 +576,24 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 .circle-bubble-cta {
   margin-top: 4px;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+}
+.circle-bubble-trash {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 999px;
+  color: #fff;
+  background: rgba(220, 38, 38, 0.85);
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+.circle-bubble-trash:hover {
+  background: rgba(220, 38, 38, 1);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.4);
 }
 .circle-bubble-close {
   position: absolute;

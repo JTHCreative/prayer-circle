@@ -18,6 +18,7 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
+import { TrashIcon } from '../components/icons.jsx';
 
 // Gentle gradient palettes for each bubble so the space has visual variety
 // while still living in the app's blue/purple family.
@@ -535,13 +536,15 @@ export default function Circles() {
                     {c.createdBy === user.uid && (
                       <button
                         type="button"
-                        className="danger"
+                        className="circle-bubble-trash"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleDelete(c);
                         }}
+                        aria-label="Delete circle"
+                        title="Delete circle"
                       >
-                        Delete circle
+                        <TrashIcon size={16} />
                       </button>
                     )}
                   </div>
