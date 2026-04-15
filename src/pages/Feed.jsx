@@ -152,7 +152,7 @@ export default function Feed() {
         )}
         <div className="feed-scroll" aria-hidden={collapsed}>
           <div className="feed-header">
-            <h1>Prayer feed</h1>
+            <h1>Prayer Feed</h1>
             <div className="feed-header-actions">
               <Link to="/new" className="btn-primary">+ New prayer</Link>
               <button
