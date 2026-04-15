@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  arrayUnion,
   collection,
   deleteDoc,
   doc,
@@ -69,6 +70,17 @@ export default function NotificationsMenu() {
     );
   }
 
+  async function acceptInvite(n) {
+    if (!user?.uid || !n.circleId) return;
+    await updateDoc(doc(db, 'circles', n.circleId), {
+      members: arrayUnion(user.uid)
+    });
+    await updateDoc(doc(db, 'users', user.uid), {
+      circleIds: arrayUnion(n.circleId)
+    });
+    await deleteDoc(doc(db, 'users', user.uid, 'notifications', n.id));
+  }
+
   return (
     <div className="notifications" ref={rootRef}>
       <button
@@ -112,6 +124,15 @@ export default function NotificationsMenu() {
                       <span className="muted">
                         {formatRelative(n.createdAt.toDate())}
                       </span>
+                    )}
+                    {n.type === 'circle_invite' && n.circleId && (
+                      <button
+                        type="button"
+                        className="bell-accept"
+                        onClick={() => acceptInvite(n)}
+                      >
+                        Accept invite
+                      </button>
                     )}
                   </div>
                   <div className="bell-item-actions">

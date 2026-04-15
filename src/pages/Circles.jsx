@@ -57,6 +57,7 @@ export default function Circles() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [inviting, setInviting] = useState(null); // circle or null
   const [expandedMembers, setExpandedMembers] = useState([]);
 
   const containerRef = useRef(null);
@@ -533,6 +534,17 @@ export default function Circles() {
                         Join
                       </button>
                     )}
+                    {isMember && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setInviting(c);
+                        }}
+                      >
+                        Invite
+                      </button>
+                    )}
                     {c.createdBy === user.uid && (
                       <button
                         type="button"
@@ -559,6 +571,16 @@ export default function Circles() {
         <CreateCircleModal
           onCancel={() => setCreating(false)}
           onCreate={handleCreate}
+        />
+      )}
+
+      {inviting && (
+        <InviteModal
+          circle={inviting}
+          inviter={profile}
+          currentUserId={user.uid}
+          friendIds={profile?.friendIds || []}
+          onClose={() => setInviting(null)}
         />
       )}
     </div>
@@ -618,6 +640,186 @@ function CreateCircleModal({ onCancel, onCreate }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
+  const [friends, setFriends] = useState([]);
+  const [loadingFriends, setLoadingFriends] = useState(true);
+  const [invitedIds, setInvitedIds] = useState(new Set());
+  const [inviteUrl, setInviteUrl] = useState('');
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [linkError, setLinkError] = useState('');
+
+  const memberSet = useMemo(
+    () => new Set(circle.members || []),
+    [circle.members]
+  );
+
+  // Load the inviter's friends (minus anyone already in the circle).
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      setLoadingFriends(true);
+      try {
+        const candidateIds = (friendIds || []).filter((id) => !memberSet.has(id));
+        if (candidateIds.length === 0) {
+          if (!cancelled) setFriends([]);
+          return;
+        }
+        const all = [];
+        for (const group of chunk(candidateIds, 10)) {
+          const snap = await getDocs(
+            query(collection(db, 'users'), where(documentId(), 'in', group))
+          );
+          snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
+        }
+        all.sort((a, b) =>
+          (a.displayName || '').localeCompare(b.displayName || '')
+        );
+        if (!cancelled) setFriends(all);
+      } finally {
+        if (!cancelled) setLoadingFriends(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [friendIds, memberSet]);
+
+  async function handleInviteFriend(friend) {
+    if (invitedIds.has(friend.id)) return;
+    await setDoc(
+      doc(db, 'users', friend.id, 'notifications', `circle-invite-${circle.id}-${currentUserId}`),
+      {
+        type: 'circle_invite',
+        title: 'Prayer circle invite',
+        body: `@${inviter?.username || 'A friend'} invited you to join "${circle.name}".`,
+        circleId: circle.id,
+        circleName: circle.name,
+        fromUserId: currentUserId,
+        fromUsername: inviter?.username || '',
+        fromName: inviter?.displayName || '',
+        read: false,
+        createdAt: serverTimestamp()
+      }
+    );
+    setInvitedIds((prev) => {
+      const next = new Set(prev);
+      next.add(friend.id);
+      return next;
+    });
+  }
+
+  async function handleGenerateLink() {
+    setGenerating(true);
+    setLinkError('');
+    try {
+      const ref = await addDoc(collection(db, 'circleInvites'), {
+        circleId: circle.id,
+        circleName: circle.name,
+        invitedBy: currentUserId,
+        inviterUsername: inviter?.username || '',
+        createdAt: serverTimestamp()
+      });
+      // HashRouter URL pattern
+      const { origin, pathname } = window.location;
+      setInviteUrl(`${origin}${pathname}#/invite/${ref.id}`);
+    } catch (err) {
+      setLinkError(err.message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  async function handleCopy() {
+    try {
+      await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      /* clipboard may be unavailable; the URL is shown in a read-only input */
+    }
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="overlay-card invite-card" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="overlay-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <h2>Invite to {circle.name}</h2>
+        <p className="muted">
+          Send an invite to a friend or share a link anyone can use to join.
+        </p>
+
+        <section className="invite-section">
+          <h3>Your friends</h3>
+          {loadingFriends ? (
+            <p className="muted">Loading friends…</p>
+          ) : friends.length === 0 ? (
+            <p className="muted">
+              No friends to invite — either you haven&rsquo;t added any yet or
+              all of them are already in this circle.
+            </p>
+          ) : (
+            <ul className="invite-friends">
+              {friends.map((f) => {
+                const invited = invitedIds.has(f.id);
+                return (
+                  <li key={f.id}>
+                    <span className="person">
+                      <Avatar user={f} size={32} />
+                      <span>
+                        <strong>{f.displayName}</strong>
+                        {f.username && (
+                          <small className="muted"> · @{f.username}</small>
+                        )}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleInviteFriend(f)}
+                      disabled={invited}
+                    >
+                      {invited ? 'Invited ✓' : 'Invite'}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+
+        <section className="invite-section">
+          <h3>Invite link</h3>
+          {!inviteUrl ? (
+            <button
+              type="button"
+              onClick={handleGenerateLink}
+              disabled={generating}
+            >
+              {generating ? 'Generating…' : 'Generate link'}
+            </button>
+          ) : (
+            <div className="invite-link-row">
+              <input type="text" value={inviteUrl} readOnly onFocus={(e) => e.target.select()} />
+              <button type="button" onClick={handleCopy}>
+                {copied ? 'Copied' : 'Copy'}
+              </button>
+            </div>
+          )}
+          {linkError && <p className="error">{linkError}</p>}
+        </section>
       </div>
     </div>
   );

@@ -55,6 +55,16 @@ service cloud.firestore {
       allow delete: if isSignedIn() && request.auth.uid in resource.data.users;
     }
 
+    // Circle invite links. Anyone signed in can read (to accept) or create
+    // (invitedBy must be themself). Only the creator can delete.
+    match /circleInvites/{inviteId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn()
+                    && request.resource.data.invitedBy == request.auth.uid;
+      allow delete: if isSignedIn() && resource.data.invitedBy == request.auth.uid;
+      allow update: if false;
+    }
+
     // Prayer circles: readable by members, creatable by anyone signed in, updatable by creator or members
     // (to add themselves). Members array controls access.
     match /circles/{circleId} {
