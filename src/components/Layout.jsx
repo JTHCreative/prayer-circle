@@ -16,6 +16,7 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const wide = location.pathname === '/';
+  const circlesPage = location.pathname === '/circles';
 
   async function handleLogout() {
     await logout();
@@ -59,7 +60,15 @@ export default function Layout() {
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>
-      <main className={wide ? 'container container-home' : 'container'}>
+      <main
+        className={
+          wide
+            ? 'container container-home'
+            : circlesPage
+            ? 'container container-wide'
+            : 'container'
+        }
+      >
         <Outlet />
       </main>
     </div>
