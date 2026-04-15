@@ -12,11 +12,12 @@
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(37, 99, 235, 0.06);
 
   /* Gradient button tokens */
-  --btn-fill: #0b1227;
-  --btn-fill-hover: #111a3b;
+  --btn-fill: #ffffff;
+  --btn-fill-hover: #f6f8ff;
+  --btn-text: var(--text);
   --btn-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 45%, #a855f7 100%);
   --btn-gradient-danger: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
-  --btn-glow: 0 6px 18px rgba(59, 130, 246, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 22px rgba(168, 85, 247, 0.18);
+  --btn-glow: 0 6px 18px rgba(59, 130, 246, 0.18), 0 0 22px rgba(168, 85, 247, 0.14);
 }
 
 * { box-sizing: border-box; }
@@ -42,7 +43,7 @@ button,
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: #fff;
+  color: var(--btn-text);
   font-size: 14px;
   font-weight: 600;
   letter-spacing: 0.01em;
@@ -52,15 +53,14 @@ button,
   background:
     linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
     var(--btn-gradient) border-box;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.1);
   text-decoration: none;
-  transition: transform 120ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
+  transition: transform 120ms ease, box-shadow 180ms ease, background 180ms ease;
 }
 button:hover,
 .btn-primary:hover,
 .btn-like:hover {
   transform: translateY(-1px);
-  filter: brightness(1.08);
   box-shadow: var(--btn-glow);
   background:
     linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
@@ -91,10 +91,13 @@ button.danger {
   background:
     linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
     var(--btn-gradient-danger) border-box;
-  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.22);
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.12);
 }
 button.danger:hover {
-  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.32), 0 0 22px rgba(249, 115, 22, 0.18);
+  background:
+    linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
+    var(--btn-gradient-danger) border-box;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.22), 0 0 18px rgba(249, 115, 22, 0.14);
 }
 
 /* Prayed = filled gradient to show the action is "on" */
@@ -191,12 +194,13 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   box-shadow: none;
 }
 .tab.active {
-  color: #fff;
+  color: var(--text);
   border: 1.5px solid transparent;
+  font-weight: 600;
   background:
     linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
     var(--btn-gradient) border-box;
-  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.15);
 }
 .tab.active:hover {
   background:
