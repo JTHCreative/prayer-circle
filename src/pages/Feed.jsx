@@ -18,6 +18,7 @@ import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
 import Globe from '../components/Globe.jsx';
+import DailyVerseCard from '../components/DailyVerseCard.jsx';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -149,6 +150,7 @@ export default function Feed() {
           <span className="sidebar-toggle-arrow">{collapsed ? '›' : '‹'}</span>
         </button>
         <div className="feed-scroll" aria-hidden={collapsed}>
+          <DailyVerseCard />
           <div className="feed-header">
             <h1>Prayer Feed</h1>
             <div className="feed-header-actions">

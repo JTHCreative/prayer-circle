@@ -360,6 +360,65 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 .sidebar-toggle-arrow { display: inline-block; line-height: 1; }
 
+/* Daily verse card in the feed sidebar */
+.verse-card {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 1.1;
+  min-height: 130px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(#0b1227, #0b1227) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.14), 0 0 8px rgba(168, 85, 247, 0.08);
+  margin-bottom: 18px;
+}
+.verse-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  background-color: #1e3a8a; /* visible even if the photo fails */
+}
+.verse-overlay {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.55) 0%, rgba(30, 58, 138, 0.4) 60%, rgba(88, 28, 135, 0.45) 100%);
+}
+.verse-content {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 18px;
+  color: #fff;
+  text-align: center;
+}
+.verse-text {
+  margin: 0;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.45;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+  max-width: 100%;
+}
+.verse-reference {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
 /* Globe fills the remaining width + full height */
 .globe-pane {
   flex: 1 1 auto;
