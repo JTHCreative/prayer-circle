@@ -38,18 +38,33 @@ export default function Globe() {
     mount.appendChild(renderer.domElement);
 
     // --- Lights --------------------------------------------------------------
-    // Soft ambient so the dark side of the globe is still slightly visible.
-    const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+    // Strong ambient so the whole globe reads clearly, plus a key light for
+    // form, a fill light on the opposite side so the "night" side isn't
+    // pitch black, and a soft rim light to catch the edge.
+    const ambient = new THREE.AmbientLight(0xffffff, 1.1);
     scene.add(ambient);
-    const sun = new THREE.DirectionalLight(0xffffff, 1.1);
-    sun.position.set(5, 3, 5);
-    scene.add(sun);
+
+    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    keyLight.position.set(5, 3, 5);
+    scene.add(keyLight);
+
+    const fillLight = new THREE.DirectionalLight(0xb8cfff, 0.55);
+    fillLight.position.set(-5, -1, -3);
+    scene.add(fillLight);
+
+    const rimLight = new THREE.DirectionalLight(0xcdb4ff, 0.35);
+    rimLight.position.set(-2, 4, -5);
+    scene.add(rimLight);
 
     // --- Earth mesh ----------------------------------------------------------
     const geometry = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshPhongMaterial({
       color: 0x889bb0, // fallback while the texture loads
-      shininess: 6
+      shininess: 4,
+      // Subtle blue self-illumination so continents stay readable even on
+      // the shadowed side.
+      emissive: 0x0a1a3a,
+      emissiveIntensity: 0.35
     });
     const earth = new THREE.Mesh(geometry, material);
     // Tilt so North is up-ish and it feels less static.
@@ -64,6 +79,8 @@ export default function Globe() {
         texture.colorSpace = THREE.SRGBColorSpace;
         texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
         material.map = texture;
+        material.emissiveMap = texture;    // use same texture for emissive tint
+        material.emissiveIntensity = 0.22; // keep the glow subtle
         material.color.set(0xffffff);
         material.needsUpdate = true;
       },
