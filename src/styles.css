@@ -1,0 +1,146 @@
+:root {
+  --bg: #f5f6fa;
+  --card: #ffffff;
+  --text: #1f2430;
+  --muted: #6b7280;
+  --primary: #6b5bd1;
+  --primary-dark: #5242b8;
+  --border: #e4e6ef;
+  --danger: #c0392b;
+  --pill-bg: #eef0fb;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+button {
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+}
+button:hover { background: var(--primary-dark); }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button.danger { background: var(--danger); }
+button.prayed { background: var(--primary-dark); }
+.btn-primary { background: var(--primary); color: #fff; padding: 8px 14px; border-radius: 6px; }
+.btn-primary:hover { text-decoration: none; background: var(--primary-dark); }
+
+input, textarea, select {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: #fff;
+}
+label { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 500; }
+label input, label textarea, label select { margin-top: 4px; font-weight: normal; }
+
+.center { text-align: center; padding: 60px; }
+.muted { color: var(--muted); font-size: 13px; }
+.error { color: var(--danger); font-size: 14px; }
+.label { font-weight: 500; margin: 8px 0 6px; }
+
+.app-shell { min-height: 100vh; display: flex; flex-direction: column; }
+.topbar {
+  background: #fff;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.brand { font-weight: 700; font-size: 18px; color: var(--primary); }
+.nav { display: flex; gap: 16px; flex: 1; }
+.nav a { color: var(--text); font-size: 14px; padding: 6px 0; }
+.nav a.active { color: var(--primary); border-bottom: 2px solid var(--primary); }
+.topbar-right { display: flex; align-items: center; gap: 12px; }
+
+.container { max-width: 760px; margin: 0 auto; padding: 24px; width: 100%; }
+.stack > * + * { margin-top: 16px; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+}
+.card h1, .card h2 { margin-top: 0; }
+
+.auth-card {
+  max-width: 380px;
+  margin: 80px auto;
+  background: #fff;
+  padding: 28px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.auth-card h1 { margin-top: 0; }
+
+.feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+
+.tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.tab {
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+.tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.prayer-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.prayer-card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}
+.prayer-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+.prayer-text { white-space: pre-wrap; margin: 8px 0; }
+.prayer-actions { display: flex; gap: 8px; margin-top: 10px; }
+
+.pill {
+  background: var(--pill-bg);
+  color: var(--primary-dark);
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.visibility { border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+.visibility legend { padding: 0 6px; font-weight: 500; }
+.radio, .checkbox { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; font-weight: normal; }
+.radio input, .checkbox input { width: auto; margin: 0; }
+.checkbox-list { display: flex; flex-direction: column; gap: 4px; }
+
+.inline-form { display: flex; gap: 8px; }
+.inline-form input { flex: 1; }
+
+.list { list-style: none; padding: 0; margin: 0; }
+.list-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
+}
+.list-row:last-child { border-bottom: none; }
