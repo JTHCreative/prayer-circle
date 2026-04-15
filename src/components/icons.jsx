@@ -67,6 +67,17 @@ export function TrashIcon(props) {
   );
 }
 
+// Open book — used for the Prayer Book nav link
+export function BookIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v14H6.5A2.5 2.5 0 0 0 4 19.5V5.5z" />
+      <path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20" />
+      <path d="M12 7v10" opacity="0.6" />
+    </Svg>
+  );
+}
+
 // Praying hands abstracted as two teardrop shapes meeting at the top,
 // with a knuckle line — a modern flat take on the classic prayer icon.
 export function PrayIcon(props) {

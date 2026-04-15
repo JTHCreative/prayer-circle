@@ -17,6 +17,12 @@ service cloud.firestore {
       allow create: if isSelf(userId);
       allow update: if isSelf(userId);
       allow delete: if false;
+
+      // Personal prayer book: snapshots of prayers the owner is praying
+      // for. Only the owner can read or write their own book.
+      match /prayerBook/{prayerId} {
+        allow read, write: if isSelf(userId);
+      }
     }
 
     // Username reservations. Doc id is the lowercased username. A user may

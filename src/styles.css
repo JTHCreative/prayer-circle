@@ -353,6 +353,36 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 
 .person { display: inline-flex; align-items: center; gap: 10px; }
 
+/* Prayer Book filter bar */
+.filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+.filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 500;
+  min-width: 140px;
+  flex: 0 1 auto;
+  margin: 0;
+}
+.filter select,
+.filter input[type='date'] {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+}
+.filter-reset {
+  align-self: flex-end;
+  padding: 8px 14px;
+  font-size: 13px;
+}
+
 /* Home layout: collapsible feed sidebar on the left + full-bleed globe on the right.
    The parent <main class="container-home"> is a flex row and fills the viewport
    below the top bar, so panes below simply fill their share. */

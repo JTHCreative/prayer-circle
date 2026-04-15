@@ -1,42 +1,12 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
+import { BookIcon, CircleVisibilityIcon, PublicIcon } from './icons.jsx';
 
-// Lightweight inline SVG icons (24x24, stroke-based — no dependencies)
 function IconNewPrayer() {
   return (
     <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
       <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconFriends() {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="9" cy="8" r="3.25" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M3.5 19c.7-2.8 3-4.5 5.5-4.5s4.8 1.7 5.5 4.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-      <circle cx="17" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8" />
-      <path
-        d="M15 14.5c2.2 0 4.3 1.3 5 3.5"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function IconCircles() {
-  return (
-    <svg className="nav-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-      <circle cx="9" cy="12" r="5" stroke="currentColor" strokeWidth="1.8" />
-      <circle cx="15" cy="12" r="5" stroke="currentColor" strokeWidth="1.8" />
     </svg>
   );
 }
@@ -63,12 +33,16 @@ export default function Layout() {
             <IconNewPrayer />
             <span>New Prayer</span>
           </NavLink>
+          <NavLink to="/book" className="nav-btn">
+            <BookIcon className="nav-icon" />
+            <span>Prayer Book</span>
+          </NavLink>
           <NavLink to="/friends" className="nav-btn">
-            <IconFriends />
+            <PublicIcon className="nav-icon" />
             <span>Friends</span>
           </NavLink>
           <NavLink to="/circles" className="nav-btn">
-            <IconCircles />
+            <CircleVisibilityIcon className="nav-icon" />
             <span>Circles</span>
           </NavLink>
         </nav>

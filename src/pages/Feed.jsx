@@ -1,31 +1,21 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  arrayRemove,
-  arrayUnion,
   collection,
   deleteDoc,
   doc,
   getDocs,
-  increment,
   limit,
   orderBy,
   query,
-  updateDoc,
   where
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import Avatar from '../components/Avatar.jsx';
 import Globe from '../components/Globe.jsx';
 import DailyVerseCard from '../components/DailyVerseCard.jsx';
-import {
-  CircleVisibilityIcon,
-  LockIcon,
-  PrayIcon,
-  PublicIcon,
-  TrashIcon
-} from '../components/icons.jsx';
+import PrayerCard from '../components/PrayerCard.jsx';
+import { togglePraying } from '../utils/prayers.js';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -117,21 +107,17 @@ export default function Feed() {
   }, [tab, user, profile]);
 
   async function togglePrayed(prayer) {
-    const ref = doc(db, 'prayers', prayer.id);
-    const alreadyPrayed = prayer.prayedBy?.includes(user.uid);
-    await updateDoc(ref, {
-      prayedBy: alreadyPrayed ? arrayRemove(user.uid) : arrayUnion(user.uid),
-      prayedCount: increment(alreadyPrayed ? -1 : 1)
-    });
+    const wasPraying = (prayer.prayedBy || []).includes(user.uid);
+    await togglePraying(user, prayer);
     setPrayers((prev) =>
       prev.map((p) =>
         p.id === prayer.id
           ? {
               ...p,
-              prayedBy: alreadyPrayed
+              prayedBy: wasPraying
                 ? (p.prayedBy || []).filter((u) => u !== user.uid)
                 : [...(p.prayedBy || []), user.uid],
-              prayedCount: (p.prayedCount || 0) + (alreadyPrayed ? -1 : 1)
+              prayedCount: (p.prayedCount || 0) + (wasPraying ? -1 : 1)
             }
           : p
       )
@@ -204,109 +190,6 @@ export default function Feed() {
       </section>
     </div>
   );
-}
-
-function PrayerCard({ prayer, currentUserId, onPray, onDelete }) {
-  const prayed = prayer.prayedBy?.includes(currentUserId);
-  const mine = prayer.authorId === currentUserId;
-
-  const visibility = useMemo(() => {
-    switch (prayer.visibility) {
-      case 'public':
-        return { Icon: PublicIcon, label: 'Public' };
-      case 'circles': {
-        const names = prayer.circleNames || [];
-        const main = names[0] || 'Circle';
-        const extra = names.length > 1 ? ` +${names.length - 1}` : '';
-        return { Icon: CircleVisibilityIcon, label: `${main}${extra}` };
-      }
-      case 'friend': {
-        // Show the @username of whoever is "on the other side" of the
-        // private prayer: for the recipient this is the author, for the
-        // author this is the target.
-        const isRecipient = prayer.targetUserId === currentUserId;
-        const handle = isRecipient
-          ? prayer.authorUsername
-          : prayer.targetUsername;
-        return {
-          Icon: LockIcon,
-          label: handle ? `@${handle}` : 'Private'
-        };
-      }
-      default:
-        return { Icon: LockIcon, label: prayer.visibility };
-    }
-  }, [prayer, currentUserId]);
-
-  const createdAt = prayer.createdAt?.toDate?.();
-  const dateLabel = createdAt ? formatDate(createdAt) : '';
-
-  return (
-    <li className="prayer-card">
-      <div className="prayer-card-header">
-        <Avatar
-          user={{
-            displayName: prayer.authorName,
-            photoURL: prayer.authorPhotoURL,
-            username: prayer.authorUsername
-          }}
-          size={40}
-        />
-        <div className="prayer-identity">
-          <span className="prayer-handle">
-            @{prayer.authorUsername || 'user'}
-          </span>
-          <span className="prayer-name">{prayer.authorName || 'Someone'}</span>
-        </div>
-        <div className="prayer-visibility" title={`Visibility: ${visibility.label}`}>
-          <visibility.Icon size={16} />
-          <span>{visibility.label}</span>
-        </div>
-        {dateLabel && <time className="prayer-date">{dateLabel}</time>}
-      </div>
-
-      <p className="prayer-text">{prayer.text}</p>
-
-      <div className="prayer-footer">
-        <button
-          type="button"
-          onClick={onPray}
-          className={prayed ? 'pray-btn prayed' : 'pray-btn'}
-        >
-          <PrayIcon size={16} />
-          <span>{prayed ? 'Prayed' : 'Pray'}</span>
-          {prayer.prayedCount ? (
-            <span className="pray-count">{prayer.prayedCount}</span>
-          ) : null}
-        </button>
-        {mine && (
-          <button
-            type="button"
-            className="trash-btn"
-            onClick={onDelete}
-            aria-label="Delete prayer"
-            title="Delete prayer"
-          >
-            <TrashIcon size={16} />
-          </button>
-        )}
-      </div>
-    </li>
-  );
-}
-
-// Compact "Apr 14, 10:27 PM" format used in prayer-card headers.
-function formatDate(date) {
-  try {
-    return date.toLocaleString(undefined, {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
-  } catch {
-    return date.toLocaleString();
-  }
 }
 
 function chunk(arr, size) {

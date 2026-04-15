@@ -9,6 +9,7 @@ import Friends from './pages/Friends.jsx';
 import Circles from './pages/Circles.jsx';
 import CircleDetail from './pages/CircleDetail.jsx';
 import Settings from './pages/Settings.jsx';
+import PrayerBook from './pages/PrayerBook.jsx';
 
 function RequireAuth({ children }) {
   const { user, loading } = useAuth();
@@ -34,6 +35,7 @@ export default function App() {
       >
         <Route path="/" element={<Feed />} />
         <Route path="/new" element={<NewPrayer />} />
+        <Route path="/book" element={<PrayerBook />} />
         <Route path="/friends" element={<Friends />} />
         <Route path="/circles" element={<Circles />} />
         <Route path="/circles/:circleId" element={<CircleDetail />} />
