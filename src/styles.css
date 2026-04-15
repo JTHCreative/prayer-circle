@@ -141,7 +141,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 
 .feed-pane {
-  flex: 0 0 40%;
+  flex: 0 0 30%;
   min-width: 0;
   background: #fff;
   border-right: 1px solid var(--border);
