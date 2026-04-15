@@ -1,0 +1,122 @@
+// Curated list of 100 general cities / metro regions around the world.
+// Kept intentionally broad (metro / city / capital) so users pick a
+// general location rather than a specific address.
+export const LOCATIONS = [
+  // North America
+  'San Francisco Bay Area',
+  'Los Angeles',
+  'Seattle',
+  'Portland',
+  'Denver',
+  'Phoenix',
+  'Las Vegas',
+  'Chicago',
+  'Dallas-Fort Worth',
+  'Houston',
+  'Austin',
+  'Atlanta',
+  'Miami',
+  'Washington D.C.',
+  'New York City',
+  'Boston',
+  'Toronto',
+  'Vancouver',
+  'Montreal',
+  'Mexico City',
+
+  // Latin America
+  'Guatemala City',
+  'Panama City',
+  'Bogotá',
+  'Quito',
+  'Lima',
+  'Santiago',
+  'Buenos Aires',
+  'São Paulo',
+  'Rio de Janeiro',
+
+  // Europe
+  'Dublin',
+  'London',
+  'Manchester',
+  'Paris',
+  'Amsterdam',
+  'Brussels',
+  'Berlin',
+  'Munich',
+  'Frankfurt',
+  'Zurich',
+  'Vienna',
+  'Prague',
+  'Warsaw',
+  'Budapest',
+  'Copenhagen',
+  'Stockholm',
+  'Oslo',
+  'Helsinki',
+  'Rome',
+  'Milan',
+  'Madrid',
+  'Barcelona',
+  'Lisbon',
+  'Athens',
+  'Istanbul',
+  'Moscow',
+  'Kyiv',
+
+  // Middle East & North Africa
+  'Cairo',
+  'Tel Aviv',
+  'Beirut',
+  'Amman',
+  'Tehran',
+  'Riyadh',
+  'Dubai',
+  'Doha',
+
+  // Sub-Saharan Africa
+  'Casablanca',
+  'Lagos',
+  'Accra',
+  'Nairobi',
+  'Addis Ababa',
+  'Kampala',
+  'Johannesburg',
+  'Cape Town',
+
+  // South Asia
+  'Karachi',
+  'Lahore',
+  'Islamabad',
+  'Mumbai',
+  'Delhi',
+  'Bangalore',
+  'Chennai',
+  'Kolkata',
+  'Dhaka',
+
+  // Southeast Asia
+  'Yangon',
+  'Bangkok',
+  'Kuala Lumpur',
+  'Singapore',
+  'Jakarta',
+  'Manila',
+  'Ho Chi Minh City',
+  'Hanoi',
+
+  // East Asia
+  'Hong Kong',
+  'Taipei',
+  'Shanghai',
+  'Beijing',
+  'Seoul',
+  'Tokyo',
+  'Osaka',
+  'Ulaanbaatar',
+
+  // Oceania
+  'Sydney',
+  'Melbourne',
+  'Auckland'
+];

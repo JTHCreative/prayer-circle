@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import LocationSelect from '../components/LocationSelect.jsx';
 
 export default function Signup() {
   const { signup } = useAuth();
@@ -40,14 +41,13 @@ export default function Signup() {
         </label>
         <label>
           General location <span className="muted">(optional)</span>
-          <input
+          <LocationSelect
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. San Francisco Bay Area, Tokyo, Bangladesh"
-            maxLength={80}
+            onChange={setLocation}
+            placeholder="Select a city or region"
           />
           <small className="muted">
-            A general region — please don't enter a street address.
+            Pick the general area closest to you.
           </small>
         </label>
         <label>

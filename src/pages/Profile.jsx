@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import LocationSelect from '../components/LocationSelect.jsx';
 
 export default function Profile() {
   const { profile, updateUserProfile } = useAuth();
@@ -45,14 +46,13 @@ export default function Profile() {
         </label>
         <label>
           General location
-          <input
+          <LocationSelect
             value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="e.g. San Francisco Bay Area, Los Angeles, Tokyo, Bangladesh"
-            maxLength={80}
+            onChange={setLocation}
+            placeholder="Select a city or region"
           />
           <small className="muted">
-            Use a general region (city, metro area, or country). Please don't enter a street address.
+            Pick the general area closest to you — no street addresses.
           </small>
         </label>
         {error && <p className="error">{error}</p>}

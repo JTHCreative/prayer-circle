@@ -1,13 +1,15 @@
 :root {
-  --bg: #f5f6fa;
+  --bg: #f4f8ff;
   --card: #ffffff;
-  --text: #1f2430;
-  --muted: #6b7280;
-  --primary: #6b5bd1;
-  --primary-dark: #5242b8;
-  --border: #e4e6ef;
-  --danger: #c0392b;
-  --pill-bg: #eef0fb;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --primary-dark: #1d4ed8;
+  --primary-soft: #eff6ff;
+  --border: #dbe4f2;
+  --danger: #dc2626;
+  --pill-bg: #dbeafe;
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(37, 99, 235, 0.06);
 }
 
 * { box-sizing: border-box; }
@@ -64,6 +66,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   display: flex;
   align-items: center;
   gap: 24px;
+  box-shadow: 0 1px 0 rgba(37, 99, 235, 0.04);
 }
 .brand { font-weight: 700; font-size: 18px; color: var(--primary); }
 .nav { display: flex; gap: 16px; flex: 1; }
@@ -77,8 +80,9 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: 10px;
   padding: 20px;
+  box-shadow: var(--shadow);
 }
 .card h1, .card h2 { margin-top: 0; }
 
@@ -144,3 +148,69 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   gap: 10px;
 }
 .list-row:last-child { border-bottom: none; }
+
+/* Searchable location combobox */
+.combo { position: relative; }
+.combo-input {
+  width: 100%;
+  text-align: left;
+  background: #fff;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 9px 10px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.combo-input:hover { background: var(--primary-soft); border-color: var(--primary); }
+.combo-input .muted { color: var(--muted); font-weight: normal; }
+.combo-caret { color: var(--muted); font-size: 12px; }
+
+.combo-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 320px;
+}
+.combo-search {
+  border: none;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  padding: 10px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.combo-search:focus { box-shadow: inset 0 -2px 0 var(--primary); }
+.combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+.combo-list li { padding: 0; }
+.combo-list button {
+  width: 100%;
+  background: transparent;
+  color: var(--text);
+  border: none;
+  padding: 8px 12px;
+  text-align: left;
+  border-radius: 0;
+  font-size: 14px;
+  cursor: pointer;
+}
+.combo-list button:hover { background: var(--primary-soft); }
+.combo-list button.active { background: var(--primary); color: #fff; }
+.combo-empty { padding: 12px; color: var(--muted); font-size: 13px; text-align: center; }
