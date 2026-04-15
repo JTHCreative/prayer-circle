@@ -54,6 +54,7 @@ export default function Circles() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [expandedMembers, setExpandedMembers] = useState([]);
 
   const containerRef = useRef(null);
   const bubbleRefs = useRef({});
@@ -62,6 +63,54 @@ export default function Circles() {
 
   useEffect(() => {
     selectedRef.current = selected;
+  }, [selected]);
+
+  // Expanded-bubble target size — used for positioning + CSS
+  const EXPANDED_SIZE = 360;
+
+  // Lazy-load up to 3 member profiles when a bubble is expanded.
+  useEffect(() => {
+    if (!selected) {
+      setExpandedMembers([]);
+      return;
+    }
+    let cancelled = false;
+    async function load() {
+      const ids = (selected.members || []).slice(0, 3);
+      if (ids.length === 0) {
+        if (!cancelled) setExpandedMembers([]);
+        return;
+      }
+      const all = [];
+      for (const group of chunk(ids, 10)) {
+        const snap = await getDocs(
+          query(collection(db, 'users'), where(documentId(), 'in', group))
+        );
+        snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
+      }
+      if (!cancelled) setExpandedMembers(all);
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id, selected?.members?.length]);
+
+  // When selection changes, set a snap target so the bubble eases into
+  // the center of the space with the expanded size.
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const rect = container.getBoundingClientRect();
+    for (const b of dataRef.current) {
+      if (selected && b.id === selected.id) {
+        b.targetX = rect.width / 2 - EXPANDED_SIZE / 2;
+        b.targetY = rect.height / 2 - EXPANDED_SIZE / 2;
+        b.snapping = true;
+      } else {
+        b.snapping = false;
+      }
+    }
   }, [selected]);
 
   // Load every circle so the whole universe shows up in the space.
@@ -121,15 +170,25 @@ export default function Circles() {
       const rect = container.getBoundingClientRect();
       const paused = !!selectedRef.current;
       for (const b of dataRef.current) {
-        if (!paused && !b.dragging) {
+        if (b.snapping) {
+          // Ease toward the target (expand-to-center animation)
+          b.x += (b.targetX - b.x) * 0.18;
+          b.y += (b.targetY - b.y) * 0.18;
+          if (
+            Math.abs(b.targetX - b.x) < 0.5 &&
+            Math.abs(b.targetY - b.y) < 0.5
+          ) {
+            b.x = b.targetX;
+            b.y = b.targetY;
+            b.snapping = false;
+          }
+        } else if (!paused && !b.dragging) {
           b.x += b.vx;
           b.y += b.vy;
           if (b.x <= 0) { b.x = 0; b.vx = -b.vx; }
           if (b.x + b.size >= rect.width) { b.x = rect.width - b.size; b.vx = -b.vx; }
           if (b.y <= 0) { b.y = 0; b.vy = -b.vy; }
           if (b.y + b.size >= rect.height) { b.y = rect.height - b.size; b.vy = -b.vy; }
-          // Apply a little drag so flicks eventually settle to the
-          // ambient drift speed.
           if (Math.abs(b.vx) > 0.5) b.vx *= 0.985;
           if (Math.abs(b.vy) > 0.5) b.vy *= 0.985;
         }
@@ -305,7 +364,14 @@ export default function Circles() {
         </button>
       </div>
 
-      <div className="circle-space" ref={containerRef}>
+      <div
+        className="circle-space"
+        ref={containerRef}
+        onPointerDown={(e) => {
+          // Clicking empty background collapses the expanded bubble
+          if (selected && e.target === e.currentTarget) setSelected(null);
+        }}
+      >
         {loading && <p className="muted center-abs">Loading circles…</p>}
         {!loading && circles.length === 0 && (
           <p className="muted center-abs">
@@ -315,46 +381,113 @@ export default function Circles() {
         {circles.map((c) => {
           const data = dataRef.current.find((d) => d.id === c.id);
           const theme = BUBBLE_THEMES[(data?.themeIndex ?? 0)];
-          const size = data?.size ?? bubbleSize(c.members?.length || 1);
+          const baseSize = data?.size ?? bubbleSize(c.members?.length || 1);
+          const isExpanded = selected?.id === c.id;
+          const memberCount = (c.members || []).length;
+          const isMember = (c.members || []).includes(user.uid);
           return (
-            <button
+            <div
               key={c.id}
-              type="button"
               ref={(el) => {
                 if (el) bubbleRefs.current[c.id] = el;
                 else delete bubbleRefs.current[c.id];
               }}
-              className="circle-bubble"
+              className={`circle-bubble${isExpanded ? ' expanded' : ''}`}
+              role="button"
+              tabIndex={0}
               style={{
-                width: size,
-                height: size,
+                width: isExpanded ? EXPANDED_SIZE : baseSize,
+                height: isExpanded ? EXPANDED_SIZE : baseSize,
                 background: `radial-gradient(circle at 30% 25%, ${theme.from} 0%, ${theme.to} 100%)`
               }}
-              onPointerDown={(e) => handlePointerDown(e, c.id)}
-              onPointerMove={(e) => handlePointerMove(e, c.id)}
-              onPointerUp={(e) => handlePointerUp(e, c.id)}
-              onPointerCancel={(e) => handlePointerUp(e, c.id)}
-              onClick={() => handleBubbleClick(c)}
-              aria-label={`Open circle ${c.name}`}
+              onPointerDown={(e) => !isExpanded && handlePointerDown(e, c.id)}
+              onPointerMove={(e) => !isExpanded && handlePointerMove(e, c.id)}
+              onPointerUp={(e) => !isExpanded && handlePointerUp(e, c.id)}
+              onPointerCancel={(e) => !isExpanded && handlePointerUp(e, c.id)}
+              onClick={() => !isExpanded && handleBubbleClick(c)}
+              onKeyDown={(e) => {
+                if (isExpanded) return;
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  setSelected(c);
+                }
+              }}
+              aria-label={
+                isExpanded
+                  ? `${c.name} circle details`
+                  : `Open circle ${c.name}`
+              }
+              aria-expanded={isExpanded}
             >
-              <span className="circle-bubble-name">{c.name}</span>
-              <span className="circle-bubble-count">
-                {(c.members || []).length}
-              </span>
-            </button>
+              {!isExpanded && (
+                <>
+                  <span className="circle-bubble-name">{c.name}</span>
+                  <span className="circle-bubble-count">{memberCount}</span>
+                </>
+              )}
+              {isExpanded && (
+                <div
+                  className="circle-bubble-content"
+                  onPointerDown={(e) => e.stopPropagation()}
+                >
+                  <button
+                    type="button"
+                    className="circle-bubble-close"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelected(null);
+                    }}
+                    aria-label="Close"
+                  >
+                    ×
+                  </button>
+                  <h2 className="circle-bubble-title">{c.name}</h2>
+                  <p className="circle-bubble-meta">
+                    {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                  </p>
+                  {c.description && (
+                    <p className="circle-bubble-desc">{c.description}</p>
+                  )}
+                  <div className="circle-bubble-avatars">
+                    {expandedMembers.map((m) => (
+                      <Avatar key={m.id} user={m} size={36} />
+                    ))}
+                    {memberCount > expandedMembers.length && (
+                      <span className="circle-bubble-more">
+                        +{memberCount - expandedMembers.length}
+                      </span>
+                    )}
+                  </div>
+                  <div className="circle-bubble-cta">
+                    {isMember ? (
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleLeave(c);
+                        }}
+                      >
+                        Leave
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleJoin(c);
+                        }}
+                      >
+                        Join
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
       </div>
-
-      {selected && (
-        <CircleDetailOverlay
-          circle={selected}
-          currentUserId={user.uid}
-          onClose={() => setSelected(null)}
-          onJoin={() => handleJoin(selected)}
-          onLeave={() => handleLeave(selected)}
-        />
-      )}
 
       {creating && (
         <CreateCircleModal
@@ -362,100 +495,6 @@ export default function Circles() {
           onCreate={handleCreate}
         />
       )}
-    </div>
-  );
-}
-
-function CircleDetailOverlay({ circle, currentUserId, onClose, onJoin, onLeave }) {
-  const [members, setMembers] = useState([]);
-  const [loadingMembers, setLoadingMembers] = useState(true);
-  const isMember = (circle.members || []).includes(currentUserId);
-  const memberCount = (circle.members || []).length;
-
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setLoadingMembers(true);
-      try {
-        const ids = (circle.members || []).slice(0, 3);
-        if (ids.length === 0) {
-          if (!cancelled) setMembers([]);
-          return;
-        }
-        const all = [];
-        for (const group of chunk(ids, 10)) {
-          const snap = await getDocs(
-            query(collection(db, 'users'), where(documentId(), 'in', group))
-          );
-          snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-        }
-        if (!cancelled) setMembers(all);
-      } finally {
-        if (!cancelled) setLoadingMembers(false);
-      }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
-  }, [circle.id, circle.members?.length]);
-
-  return (
-    <div className="overlay" onClick={onClose}>
-      <div className="overlay-card" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className="overlay-close"
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ×
-        </button>
-        <div className="overlay-header">
-          <div className="overlay-dot" />
-          <div>
-            <h2>{circle.name}</h2>
-            <p className="muted">
-              {memberCount} {memberCount === 1 ? 'member' : 'members'}
-            </p>
-          </div>
-        </div>
-
-        {circle.description && (
-          <p className="overlay-description">{circle.description}</p>
-        )}
-
-        <div className="overlay-members">
-          {loadingMembers ? (
-            <span className="muted">Loading members…</span>
-          ) : (
-            <>
-              <div className="member-avatars">
-                {members.map((m) => (
-                  <Avatar key={m.id} user={m} size={44} />
-                ))}
-              </div>
-              {memberCount > members.length && (
-                <span className="muted">
-                  +{memberCount - members.length} more
-                </span>
-              )}
-            </>
-          )}
-        </div>
-
-        <div className="overlay-actions">
-          {isMember ? (
-            <button type="button" className="danger" onClick={onLeave}>
-              Leave circle
-            </button>
-          ) : (
-            <button type="button" onClick={onJoin}>
-              Join circle
-            </button>
-          )}
-        </div>
-      </div>
     </div>
   );
 }
