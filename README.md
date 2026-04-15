@@ -86,14 +86,47 @@ npm run dev
 
 Visit <http://localhost:5173>.
 
-## Deploy
+## Deploy Firestore rules & indexes
 
 ```bash
 npm install -g firebase-tools
 firebase login
 firebase deploy --only firestore:rules,firestore:indexes
-npm run deploy   # builds + deploys Hosting
 ```
+
+## Deploy the site to GitHub Pages
+
+The app is wired for GitHub Pages via a workflow in
+`.github/workflows/deploy.yml`. **One-time setup:**
+
+1. **Enable Pages** — repo Settings → Pages → *Source: GitHub Actions*.
+2. **Add repo secrets** — repo Settings → Secrets and variables →
+   Actions → New repository secret. Paste the same values from your
+   local `.env` into seven secrets:
+   - `VITE_FIREBASE_API_KEY`
+   - `VITE_FIREBASE_AUTH_DOMAIN`
+   - `VITE_FIREBASE_PROJECT_ID`
+   - `VITE_FIREBASE_STORAGE_BUCKET`
+   - `VITE_FIREBASE_MESSAGING_SENDER_ID`
+   - `VITE_FIREBASE_APP_ID`
+   - `VITE_FIREBASE_MEASUREMENT_ID`
+3. **Authorize the Pages domain in Firebase Auth** — Firebase Console
+   → Authentication → Settings → Authorized domains → add
+   `<your-user>.github.io`. Without this, sign-in throws
+   `auth/unauthorized-domain`.
+
+After those three steps, every push to `main` (or a manual
+*Run workflow* from the Actions tab) builds and publishes the site to
+`https://<your-user>.github.io/prayer-circle/`.
+
+### Notes specific to Pages
+
+- Routes use `HashRouter` (URLs look like `/prayer-circle/#/friends`)
+  because Pages can't rewrite arbitrary paths back to `index.html`.
+- `vite.config.js` applies `base: '/prayer-circle/'` only to production
+  builds, so local dev is unaffected.
+- Firebase web API keys are safe to ship in the client bundle —
+  security is enforced by Firestore rules, not key secrecy.
 
 ## Notes & next steps
 
