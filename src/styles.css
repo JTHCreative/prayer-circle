@@ -115,10 +115,19 @@ button.prayed:hover {
 input, textarea, select {
   width: 100%;
   padding: 9px 10px;
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
   background: #fff;
+  transition: box-shadow 180ms ease, background 180ms ease;
+}
+input:focus, textarea:focus, select:focus {
+  outline: none;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12), 0 0 8px rgba(139, 92, 246, 0.18);
 }
 label { display: block; margin-bottom: 12px; font-size: 14px; font-weight: 500; }
 label input, label textarea, label select { margin-top: 4px; font-weight: normal; }
