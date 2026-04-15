@@ -10,6 +10,13 @@
   --danger: #dc2626;
   --pill-bg: #dbeafe;
   --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 4px 12px rgba(37, 99, 235, 0.06);
+
+  /* Gradient button tokens */
+  --btn-fill: #0b1227;
+  --btn-fill-hover: #111a3b;
+  --btn-gradient: linear-gradient(135deg, #3b82f6 0%, #6366f1 45%, #a855f7 100%);
+  --btn-gradient-danger: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+  --btn-glow: 0 6px 18px rgba(59, 130, 246, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.04) inset, 0 0 22px rgba(168, 85, 247, 0.18);
 }
 
 * { box-sizing: border-box; }
@@ -26,21 +33,81 @@ html, body, #root {
 a { color: var(--primary); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-button {
+/* Gradient-bordered pill buttons. Dark navy fill, blue→purple border. */
+button,
+.btn-primary,
+.btn-like {
   cursor: pointer;
-  background: var(--primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
   color: #fff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 6px;
   font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  padding: 9px 18px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.18);
+  text-decoration: none;
+  transition: transform 120ms ease, box-shadow 180ms ease, filter 180ms ease, background 180ms ease;
 }
-button:hover { background: var(--primary-dark); }
-button:disabled { opacity: 0.6; cursor: not-allowed; }
-button.danger { background: var(--danger); }
-button.prayed { background: var(--primary-dark); }
-.btn-primary { background: var(--primary); color: #fff; padding: 8px 14px; border-radius: 6px; }
-.btn-primary:hover { text-decoration: none; background: var(--primary-dark); }
+button:hover,
+.btn-primary:hover,
+.btn-like:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.08);
+  box-shadow: var(--btn-glow);
+  background:
+    linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
+    var(--btn-gradient) border-box;
+  text-decoration: none;
+}
+button:active,
+.btn-primary:active,
+.btn-like:active { transform: translateY(0); }
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+  filter: none;
+  box-shadow: none;
+}
+
+button:focus-visible,
+.btn-primary:focus-visible,
+.btn-like:focus-visible {
+  outline: 2px solid rgba(139, 92, 246, 0.55);
+  outline-offset: 2px;
+}
+
+/* Danger = red/orange gradient border */
+button.danger {
+  background:
+    linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
+    var(--btn-gradient-danger) border-box;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.22);
+}
+button.danger:hover {
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.32), 0 0 22px rgba(249, 115, 22, 0.18);
+}
+
+/* Prayed = filled gradient to show the action is "on" */
+button.prayed {
+  background: var(--btn-gradient);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 22px rgba(139, 92, 246, 0.4);
+}
+button.prayed:hover {
+  background: var(--btn-gradient);
+  filter: brightness(1.05);
+}
 
 input, textarea, select {
   width: 100%;
@@ -114,8 +181,28 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   padding: 6px 12px;
   border-radius: 999px;
   font-size: 13px;
+  font-weight: 500;
+  box-shadow: none;
 }
-.tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+.tab:hover {
+  background: var(--primary-soft);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+.tab.active {
+  color: #fff;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 3px 10px rgba(59, 130, 246, 0.25);
+}
+.tab.active:hover {
+  background:
+    linear-gradient(var(--btn-fill-hover), var(--btn-fill-hover)) padding-box,
+    var(--btn-gradient) border-box;
+}
 
 .prayer-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 12px; }
 .prayer-card {
@@ -181,25 +268,27 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 
 .collapse-btn, .expand-btn {
-  background: #fff;
   color: var(--text);
-  border: 1px solid var(--border);
   width: 28px;
   height: 28px;
   padding: 0;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
   font-size: 18px;
   line-height: 1;
+  font-weight: 600;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
+  border: 1.5px solid transparent;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
 }
 .collapse-btn:hover,
 .expand-btn:hover {
-  background: var(--primary-soft);
-  border-color: var(--primary);
   color: var(--primary);
+  filter: none;
+  box-shadow: 0 0 14px rgba(139, 92, 246, 0.25);
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
 }
 .expand-btn {
   position: absolute;
@@ -297,12 +386,21 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   border-radius: 6px;
   padding: 9px 10px;
   font-size: 14px;
+  font-weight: 400;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  box-shadow: none;
+  letter-spacing: 0;
 }
-.combo-input:hover { background: var(--primary-soft); border-color: var(--primary); }
+.combo-input:hover {
+  background: var(--primary-soft);
+  border-color: var(--primary);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
 .combo-input .muted { color: var(--muted); font-weight: normal; }
 .combo-caret { color: var(--muted); font-size: 12px; }
 
@@ -346,10 +444,22 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   text-align: left;
   border-radius: 0;
   font-size: 14px;
+  font-weight: 400;
   cursor: pointer;
+  box-shadow: none;
+  letter-spacing: 0;
 }
-.combo-list button:hover { background: var(--primary-soft); }
-.combo-list button.active { background: var(--primary); color: #fff; }
+.combo-list button:hover {
+  background: var(--primary-soft);
+  filter: none;
+  transform: none;
+  box-shadow: none;
+}
+.combo-list button.active {
+  background: var(--btn-gradient);
+  color: #fff;
+  box-shadow: none;
+}
 .combo-empty { padding: 12px; color: var(--muted); font-size: 13px; text-align: center; }
 
 /* Avatars */
