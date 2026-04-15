@@ -17,6 +17,7 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
+import Globe from '../components/Globe.jsx';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -135,40 +136,49 @@ export default function Feed() {
   }
 
   return (
-    <div>
-      <div className="feed-header">
-        <h1>Prayer feed</h1>
-        <Link to="/new" className="btn-primary">+ New prayer</Link>
-      </div>
-      <div className="tabs">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            className={tab === t.key ? 'tab active' : 'tab'}
-            onClick={() => setTab(t.key)}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {loading ? (
-        <p className="muted">Loading prayers…</p>
-      ) : prayers.length === 0 ? (
-        <p className="muted">No prayers here yet. <Link to="/new">Share one?</Link></p>
-      ) : (
-        <ul className="prayer-list">
-          {prayers.map((p) => (
-            <PrayerCard
-              key={p.id}
-              prayer={p}
-              currentUserId={user.uid}
-              onPray={() => togglePrayed(p)}
-              onDelete={() => handleDelete(p)}
-            />
+    <div className="home-split">
+      <aside className="feed-pane">
+        <div className="feed-header">
+          <h1>Prayer feed</h1>
+          <Link to="/new" className="btn-primary">+ New prayer</Link>
+        </div>
+        <div className="tabs">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              className={tab === t.key ? 'tab active' : 'tab'}
+              onClick={() => setTab(t.key)}
+            >
+              {t.label}
+            </button>
           ))}
-        </ul>
-      )}
+        </div>
+
+        {loading ? (
+          <p className="muted">Loading prayers…</p>
+        ) : prayers.length === 0 ? (
+          <p className="muted">No prayers here yet. <Link to="/new">Share one?</Link></p>
+        ) : (
+          <ul className="prayer-list">
+            {prayers.map((p) => (
+              <PrayerCard
+                key={p.id}
+                prayer={p}
+                currentUserId={user.uid}
+                onPray={() => togglePrayed(p)}
+                onDelete={() => handleDelete(p)}
+              />
+            ))}
+          </ul>
+        )}
+      </aside>
+
+      <section className="globe-pane" aria-label="Interactive globe">
+        <Globe />
+        <div className="globe-caption">
+          <span>🌍 Drag the globe to spin it</span>
+        </div>
+      </section>
     </div>
   );
 }

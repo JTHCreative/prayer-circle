@@ -1,10 +1,12 @@
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
 
 export default function Layout() {
   const { profile, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const wide = location.pathname === '/';
 
   async function handleLogout() {
     await logout();
@@ -36,7 +38,7 @@ export default function Layout() {
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>
-      <main className="container">
+      <main className={wide ? 'container container-wide' : 'container'}>
         <Outlet />
       </main>
     </div>
