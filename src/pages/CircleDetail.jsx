@@ -14,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import Avatar from '../components/Avatar.jsx';
 
 export default function CircleDetail() {
   const { circleId } = useParams();
@@ -101,9 +102,13 @@ export default function CircleDetail() {
         <ul className="list">
           {members.map((m) => (
             <li key={m.id} className="list-row">
-              <span>
-                {m.displayName}
-                {m.location && <small className="muted"> · 📍 {m.location}</small>}
+              <span className="person">
+                <Avatar user={m} size={32} />
+                <span>
+                  {m.displayName}
+                  {m.username && <small className="muted"> · @{m.username}</small>}
+                  {m.location && <small className="muted"> · 📍 {m.location}</small>}
+                </span>
               </span>
               {m.id === circle.createdBy && <span className="pill">Creator</span>}
             </li>
@@ -119,14 +124,27 @@ export default function CircleDetail() {
           <ul className="prayer-list">
             {prayers.map((p) => (
               <li key={p.id} className="prayer-card">
-                <div className="prayer-meta">
-                  <strong>{p.authorName}</strong>
-                  {p.authorLocation && (
-                    <span className="muted">📍 {p.authorLocation}</span>
-                  )}
-                  {p.createdAt?.toDate && (
-                    <span className="muted">{p.createdAt.toDate().toLocaleString()}</span>
-                  )}
+                <div className="prayer-header">
+                  <Avatar
+                    user={{
+                      displayName: p.authorName,
+                      photoURL: p.authorPhotoURL,
+                      username: p.authorUsername
+                    }}
+                    size={40}
+                  />
+                  <div className="prayer-meta">
+                    <strong>{p.authorName}</strong>
+                    {p.authorUsername && (
+                      <span className="muted">@{p.authorUsername}</span>
+                    )}
+                    {p.authorLocation && (
+                      <span className="muted">📍 {p.authorLocation}</span>
+                    )}
+                    {p.createdAt?.toDate && (
+                      <span className="muted">{p.createdAt.toDate().toLocaleString()}</span>
+                    )}
+                  </div>
                 </div>
                 <p className="prayer-text">{p.text}</p>
               </li>

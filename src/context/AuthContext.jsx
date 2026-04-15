@@ -1,15 +1,38 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import {
+  EmailAuthProvider,
   createUserWithEmailAndPassword,
   onAuthStateChanged,
+  reauthenticateWithCredential,
   signInWithEmailAndPassword,
   signOut,
+  updatePassword,
   updateProfile
 } from 'firebase/auth';
-import { doc, getDoc, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase.js';
+import {
+  deleteDoc,
+  doc,
+  getDoc,
+  runTransaction,
+  serverTimestamp,
+  setDoc,
+  updateDoc
+} from 'firebase/firestore';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { auth, db, storage } from '../firebase.js';
 
 const AuthContext = createContext(null);
+
+// Usernames: 3-20 chars, lowercase letters/numbers/underscore
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+
+function normalizeUsername(raw) {
+  return (raw || '').trim().toLowerCase();
+}
+
+function fullDisplayName(firstName, lastName) {
+  return [firstName, lastName].map((s) => (s || '').trim()).filter(Boolean).join(' ');
+}
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
@@ -30,39 +53,57 @@ export function AuthProvider({ children }) {
     return unsub;
   }, []);
 
-  async function signup(email, password, displayName, location = '') {
-    const cred = await createUserWithEmailAndPassword(auth, email, password);
-    await updateProfile(cred.user, { displayName });
-    await setDoc(doc(db, 'users', cred.user.uid), {
-      displayName,
-      displayNameLower: displayName.toLowerCase(),
-      email,
-      location: location.trim(),
-      circleIds: [],
-      friendIds: [],
-      createdAt: serverTimestamp()
-    });
-    return cred.user;
+  async function refreshProfile() {
+    if (!auth.currentUser) return;
+    const snap = await getDoc(doc(db, 'users', auth.currentUser.uid));
+    setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
   }
 
-  async function updateUserProfile({ displayName, location }) {
-    if (!user) throw new Error('Not signed in');
-    const updates = {};
-    if (typeof displayName === 'string') {
-      const trimmed = displayName.trim();
-      if (trimmed.length < 2) throw new Error('Display name must be at least 2 characters.');
-      updates.displayName = trimmed;
-      updates.displayNameLower = trimmed.toLowerCase();
+  async function signup({ email, password, firstName, lastName, username, location = '' }) {
+    const cleanUsername = normalizeUsername(username);
+    if (!USERNAME_RE.test(cleanUsername)) {
+      throw new Error('Username must be 3-20 chars, lowercase letters/numbers/underscore.');
     }
-    if (typeof location === 'string') {
-      updates.location = location.trim();
+    const first = (firstName || '').trim();
+    const last = (lastName || '').trim();
+    if (first.length < 1) throw new Error('First name is required.');
+
+    // Reserve username atomically before creating the account. If another
+    // account already owns it, bail out.
+    const usernameRef = doc(db, 'usernames', cleanUsername);
+    const existing = await getDoc(usernameRef);
+    if (existing.exists()) {
+      throw new Error('That username is already taken.');
     }
-    if (Object.keys(updates).length === 0) return;
-    await updateDoc(doc(db, 'users', user.uid), updates);
-    if (updates.displayName) {
-      await updateProfile(user, { displayName: updates.displayName });
+
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    const displayName = fullDisplayName(first, last);
+
+    try {
+      await setDoc(usernameRef, { uid: cred.user.uid, createdAt: serverTimestamp() });
+      await updateProfile(cred.user, { displayName });
+      await setDoc(doc(db, 'users', cred.user.uid), {
+        firstName: first,
+        lastName: last,
+        username: cleanUsername,
+        usernameLower: cleanUsername,
+        displayName,
+        displayNameLower: displayName.toLowerCase(),
+        email,
+        location: (location || '').trim(),
+        photoURL: '',
+        circleIds: [],
+        friendIds: [],
+        createdAt: serverTimestamp()
+      });
+    } catch (err) {
+      // If the follow-up writes failed, release the username reservation
+      // so the user can retry without being blocked.
+      try { await deleteDoc(usernameRef); } catch {}
+      throw err;
     }
-    await refreshProfile();
+
+    return cred.user;
   }
 
   async function login(email, password) {
@@ -74,13 +115,140 @@ export function AuthProvider({ children }) {
     await signOut(auth);
   }
 
-  async function refreshProfile() {
-    if (!user) return;
-    const snap = await getDoc(doc(db, 'users', user.uid));
-    setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
+  // Patch any combination of firstName, lastName, username, location.
+  // Username changes are atomic: the old reservation is deleted and the new
+  // one created in a single transaction so two users can't collide.
+  async function updateUserProfile({ firstName, lastName, username, location }) {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    const uid = auth.currentUser.uid;
+    const userRef = doc(db, 'users', uid);
+
+    const updates = {};
+    let newFirst = null;
+    let newLast = null;
+
+    if (typeof firstName === 'string') {
+      const v = firstName.trim();
+      if (v.length < 1) throw new Error('First name is required.');
+      updates.firstName = v;
+      newFirst = v;
+    }
+    if (typeof lastName === 'string') {
+      updates.lastName = lastName.trim();
+      newLast = lastName.trim();
+    }
+    if (typeof location === 'string') {
+      updates.location = location.trim();
+    }
+
+    let newUsernameLower = null;
+    if (typeof username === 'string') {
+      newUsernameLower = normalizeUsername(username);
+      if (!USERNAME_RE.test(newUsernameLower)) {
+        throw new Error('Username must be 3-20 chars, lowercase letters/numbers/underscore.');
+      }
+    }
+
+    // Compute new displayName if either name part changed.
+    if (newFirst !== null || newLast !== null) {
+      const snap = await getDoc(userRef);
+      const data = snap.data() || {};
+      const composed = fullDisplayName(
+        newFirst ?? data.firstName ?? '',
+        newLast ?? data.lastName ?? ''
+      );
+      updates.displayName = composed;
+      updates.displayNameLower = composed.toLowerCase();
+    }
+
+    if (newUsernameLower) {
+      const currentSnap = await getDoc(userRef);
+      const currentLower = currentSnap.data()?.usernameLower;
+      if (currentLower !== newUsernameLower) {
+        const newRef = doc(db, 'usernames', newUsernameLower);
+        await runTransaction(db, async (tx) => {
+          const takenSnap = await tx.get(newRef);
+          if (takenSnap.exists()) {
+            throw new Error('That username is already taken.');
+          }
+          tx.set(newRef, { uid, createdAt: serverTimestamp() });
+          if (currentLower) {
+            tx.delete(doc(db, 'usernames', currentLower));
+          }
+          tx.update(userRef, {
+            ...updates,
+            username: newUsernameLower,
+            usernameLower: newUsernameLower
+          });
+        });
+        if (updates.displayName) {
+          await updateProfile(auth.currentUser, { displayName: updates.displayName });
+        }
+        await refreshProfile();
+        return;
+      }
+    }
+
+    if (Object.keys(updates).length === 0) return;
+    await updateDoc(userRef, updates);
+    if (updates.displayName) {
+      await updateProfile(auth.currentUser, { displayName: updates.displayName });
+    }
+    await refreshProfile();
   }
 
-  const value = { user, profile, loading, signup, login, logout, refreshProfile, updateUserProfile };
+  async function uploadAvatar(file) {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    if (!file.type.startsWith('image/')) throw new Error('Please choose an image file.');
+    if (file.size > 5 * 1024 * 1024) throw new Error('Image must be under 5 MB.');
+
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const storageRef = ref(storage, `avatars/${auth.currentUser.uid}/avatar.${ext}`);
+    await uploadBytes(storageRef, file, { contentType: file.type });
+    const url = await getDownloadURL(storageRef);
+
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), { photoURL: url });
+    await updateProfile(auth.currentUser, { photoURL: url });
+    await refreshProfile();
+    return url;
+  }
+
+  async function removeAvatar() {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    // Try to delete known extensions. Failures are fine (file may not exist).
+    for (const ext of ['jpg', 'jpeg', 'png', 'webp', 'gif']) {
+      try {
+        await deleteObject(ref(storage, `avatars/${auth.currentUser.uid}/avatar.${ext}`));
+      } catch {
+        /* ignore */
+      }
+    }
+    await updateDoc(doc(db, 'users', auth.currentUser.uid), { photoURL: '' });
+    await updateProfile(auth.currentUser, { photoURL: null });
+    await refreshProfile();
+  }
+
+  async function changePassword(currentPassword, newPassword) {
+    if (!auth.currentUser) throw new Error('Not signed in');
+    if (newPassword.length < 6) throw new Error('New password must be at least 6 characters.');
+    const cred = EmailAuthProvider.credential(auth.currentUser.email, currentPassword);
+    await reauthenticateWithCredential(auth.currentUser, cred);
+    await updatePassword(auth.currentUser, newPassword);
+  }
+
+  const value = {
+    user,
+    profile,
+    loading,
+    signup,
+    login,
+    logout,
+    refreshProfile,
+    updateUserProfile,
+    uploadAvatar,
+    removeAvatar,
+    changePassword
+  };
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 

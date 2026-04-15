@@ -1,5 +1,6 @@
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import Avatar from './Avatar.jsx';
 
 export default function Layout() {
   const { profile, logout } = useAuth();
@@ -10,6 +11,8 @@ export default function Layout() {
     navigate('/login');
   }
 
+  const name = profile?.displayName || [profile?.firstName, profile?.lastName].filter(Boolean).join(' ') || 'Account';
+
   return (
     <div className="app-shell">
       <header className="topbar">
@@ -19,13 +22,17 @@ export default function Layout() {
           <NavLink to="/new">New Prayer</NavLink>
           <NavLink to="/friends">Friends</NavLink>
           <NavLink to="/circles">Circles</NavLink>
-          <NavLink to="/profile">Profile</NavLink>
         </nav>
         <div className="topbar-right">
-          <span className="muted">
-            {profile?.displayName}
-            {profile?.location ? ` · ${profile.location}` : ''}
-          </span>
+          <Link to="/settings" className="profile-chip" title="Account settings">
+            <Avatar user={profile} size={32} />
+            <span className="profile-chip-text">
+              <span className="profile-chip-name">{name}</span>
+              {profile?.username && (
+                <span className="profile-chip-handle">@{profile.username}</span>
+              )}
+            </span>
+          </Link>
           <button onClick={handleLogout}>Log out</button>
         </div>
       </header>

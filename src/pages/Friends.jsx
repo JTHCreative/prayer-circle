@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import Avatar from '../components/Avatar.jsx';
 
 // Friendship doc id is the two uids sorted alphabetically joined by "_".
 function friendshipId(a, b) {
@@ -159,9 +160,13 @@ export default function Friends() {
                 incoming.some((i) => i.other?.id === u.id);
               return (
                 <li key={u.id} className="list-row">
-                  <span>
-                    {u.displayName}
-                    {u.location && <small className="muted"> · 📍 {u.location}</small>}
+                  <span className="person">
+                    <Avatar user={u} size={32} />
+                    <span>
+                      {u.displayName}
+                      {u.username && <small className="muted"> · @{u.username}</small>}
+                      {u.location && <small className="muted"> · 📍 {u.location}</small>}
+                    </span>
                   </span>
                   {isFriend ? (
                     <span className="pill">Friends</span>
@@ -216,9 +221,13 @@ export default function Friends() {
           <ul className="list">
             {friends.map((f) => (
               <li key={f.id} className="list-row">
-                <span>
-                  {f.displayName}
-                  {f.location && <small className="muted"> · 📍 {f.location}</small>}
+                <span className="person">
+                  <Avatar user={f} size={32} />
+                  <span>
+                    {f.displayName}
+                    {f.username && <small className="muted"> · @{f.username}</small>}
+                    {f.location && <small className="muted"> · 📍 {f.location}</small>}
+                  </span>
                 </span>
                 <button className="danger" onClick={() => removeFriend(f.id)}>Remove</button>
               </li>

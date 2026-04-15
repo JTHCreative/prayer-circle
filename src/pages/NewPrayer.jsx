@@ -86,6 +86,8 @@ export default function NewPrayer() {
         authorId: user.uid,
         authorName: profile?.displayName ?? 'Anonymous',
         authorLocation: profile?.location ?? '',
+        authorPhotoURL: profile?.photoURL ?? '',
+        authorUsername: profile?.username ?? '',
         visibility,
         targetUserId: visibility === 'friend' ? targetUserId : null,
         circleIds: visibility === 'circles' ? selectedCircleIds : [],

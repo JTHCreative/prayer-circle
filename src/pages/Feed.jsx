@@ -16,6 +16,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import Avatar from '../components/Avatar.jsx';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -188,13 +189,26 @@ function PrayerCard({ prayer, currentUserId, onPray, onDelete }) {
 
   return (
     <li className="prayer-card">
-      <div className="prayer-meta">
-        <strong>{prayer.authorName || 'Someone'}</strong>
-        {prayer.authorLocation && (
-          <span className="muted">📍 {prayer.authorLocation}</span>
-        )}
-        <span className="pill">{visibilityLabel}</span>
-        {createdAt && <span className="muted">{createdAt.toLocaleString()}</span>}
+      <div className="prayer-header">
+        <Avatar
+          user={{
+            displayName: prayer.authorName,
+            photoURL: prayer.authorPhotoURL,
+            username: prayer.authorUsername
+          }}
+          size={40}
+        />
+        <div className="prayer-meta">
+          <strong>{prayer.authorName || 'Someone'}</strong>
+          {prayer.authorUsername && (
+            <span className="muted">@{prayer.authorUsername}</span>
+          )}
+          {prayer.authorLocation && (
+            <span className="muted">📍 {prayer.authorLocation}</span>
+          )}
+          <span className="pill">{visibilityLabel}</span>
+          {createdAt && <span className="muted">{createdAt.toLocaleString()}</span>}
+        </div>
       </div>
       <p className="prayer-text">{prayer.text}</p>
       <div className="prayer-actions">

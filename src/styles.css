@@ -116,7 +116,10 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   border-radius: 8px;
   padding: 16px;
 }
+.prayer-header { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 8px; }
+.prayer-header .prayer-meta { margin-bottom: 0; flex: 1; }
 .prayer-meta { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+.person { display: inline-flex; align-items: center; gap: 10px; }
 .prayer-text { white-space: pre-wrap; margin: 8px 0; }
 .prayer-actions { display: flex; gap: 8px; margin-top: 10px; }
 
@@ -214,3 +217,64 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .combo-list button:hover { background: var(--primary-soft); }
 .combo-list button.active { background: var(--primary); color: #fff; }
 .combo-empty { padding: 12px; color: var(--muted); font-size: 13px; text-align: center; }
+
+/* Avatars */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  object-fit: cover;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  border: 1px solid var(--border);
+  font-weight: 600;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+.avatar-initials {
+  background: var(--primary);
+  color: #fff;
+  border-color: var(--primary);
+}
+
+/* Profile chip in the top bar */
+.profile-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 4px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+.profile-chip:hover { background: #e0ecff; border-color: var(--primary); text-decoration: none; }
+.profile-chip-text { display: flex; flex-direction: column; line-height: 1.1; font-size: 13px; }
+.profile-chip-name { font-weight: 600; }
+.profile-chip-handle { color: var(--muted); font-size: 12px; }
+
+/* Settings page */
+.avatar-row { display: flex; align-items: center; gap: 16px; }
+.stack-sm > * + * { margin-top: 6px; }
+.button-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.form-row { display: flex; gap: 12px; }
+.form-row > label { flex: 1; }
+
+.btn-like {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: var(--primary);
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.btn-like:hover { background: var(--primary-dark); }
