@@ -128,19 +128,28 @@ export default function Settings() {
           <Avatar user={profile} size={72} />
           <div className="stack-sm">
             <div className="button-row">
-              <label className="btn-like">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={avatarBusy}
+              >
                 {profile?.photoURL ? 'Change picture' : 'Upload picture'}
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleAvatarChange}
-                  disabled={avatarBusy}
-                  hidden
-                />
-              </label>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleAvatarChange}
+                disabled={avatarBusy}
+                hidden
+              />
               {profile?.photoURL && (
-                <button type="button" className="danger" onClick={handleRemoveAvatar} disabled={avatarBusy}>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={handleRemoveAvatar}
+                  disabled={avatarBusy}
+                >
                   Remove
                 </button>
               )}
