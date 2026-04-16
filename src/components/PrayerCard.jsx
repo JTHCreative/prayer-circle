@@ -46,7 +46,7 @@ export default function PrayerCard({
   const dateLabel = createdAt ? formatDate(createdAt) : '';
 
   return (
-    <li className="prayer-card">
+    <article className="prayer-card">
       <div className="prayer-card-header">
         <Avatar
           user={{
@@ -96,7 +96,7 @@ export default function PrayerCard({
           </button>
         )}
       </div>
-    </li>
+    </article>
   );
 }
 

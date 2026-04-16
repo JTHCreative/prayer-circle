@@ -186,7 +186,7 @@ export default function Feed() {
           ) : prayers.length === 0 ? (
             <p className="muted">No prayers here yet. <Link to="/new">Share one?</Link></p>
           ) : (
-            <ul className="prayer-list">
+            <div className="prayer-list">
               {prayers.map((p) => (
                 <PrayerCard
                   key={p.id}
@@ -196,7 +196,7 @@ export default function Feed() {
                   onDelete={() => handleDelete(p)}
                 />
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </aside>

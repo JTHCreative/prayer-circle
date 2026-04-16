@@ -272,7 +272,7 @@ export default function PrayerBook() {
           <p className="muted">No prayers match the current filters.</p>
         </div>
       ) : (
-        <ul className="prayer-list">
+        <div className="prayer-list">
           {filtered.map((entry) => (
             <PrayerCard
               key={entry.id}
@@ -281,7 +281,7 @@ export default function PrayerBook() {
               onPray={() => handleUnpray(entry)}
             />
           ))}
-        </ul>
+        </div>
       )}
     </div>
   );

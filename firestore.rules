@@ -37,8 +37,14 @@ service cloud.firestore {
     // Username reservations. Doc id is the lowercased username. A user may
     // only reserve a username they own. Delete is allowed by the owner so
     // they can release their old username when they change it.
+    //
+    // `get` is public (unsigned-in) so the signup form can check whether a
+    // username is already taken before it creates a Firebase Auth user —
+    // otherwise we'd orphan accounts on every collision. `list` stays
+    // gated so nobody can enumerate every username.
     match /usernames/{usernameLower} {
-      allow read: if isSignedIn();
+      allow get: if true;
+      allow list: if isSignedIn();
       allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
       allow delete: if isSignedIn() && resource.data.uid == request.auth.uid;
       allow update: if false;
