@@ -91,44 +91,60 @@ export default function Circles() {
     async function load() {
       setPanelLoading(true);
       const memberIds = selected.members || [];
-      const memberTasks = [];
-      for (const group of chunk(memberIds, 10)) {
-        memberTasks.push(
-          getDocs(query(collection(db, 'users'), where(documentId(), 'in', group)))
-        );
-      }
-      // Only fetch prayers if the viewer is part of the circle — prayers
-      // shared to a circle are meant for its members.
-      const prayersTask = isMemberOfSelected
-        ? getDocs(
-            query(
-              collection(db, 'prayers'),
-              where('circleIds', 'array-contains', selected.id),
-              orderBy('createdAt', 'desc')
+      try {
+        const memberSnaps = await Promise.all(
+          chunk(memberIds, 10).map((group) =>
+            getDocs(
+              query(collection(db, 'users'), where(documentId(), 'in', group))
             )
           )
-        : null;
-
-      const [memberSnaps, prayerSnap] = await Promise.all([
-        Promise.all(memberTasks),
-        prayersTask
-      ]);
-      if (cancelled) return;
-
-      const members = [];
-      for (const snap of memberSnaps) {
-        snap.forEach((d) => members.push({ id: d.id, ...d.data() }));
+        );
+        if (cancelled) return;
+        const members = [];
+        for (const snap of memberSnaps) {
+          snap.forEach((d) => members.push({ id: d.id, ...d.data() }));
+        }
+        // Keep members in the order they appear in the circle so the creator
+        // doesn't jump around when more people join.
+        const indexById = new Map(memberIds.map((id, i) => [id, i]));
+        members.sort(
+          (a, b) => (indexById.get(a.id) ?? 0) - (indexById.get(b.id) ?? 0)
+        );
+        setPanelMembers(members);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load circle members', err);
       }
-      // Keep members in the order they appear in the circle so the creator
-      // doesn't jump around when more people join.
-      const indexById = new Map(memberIds.map((id, i) => [id, i]));
-      members.sort((a, b) => (indexById.get(a.id) ?? 0) - (indexById.get(b.id) ?? 0));
-      setPanelMembers(members);
 
-      const prayers = [];
-      if (prayerSnap) prayerSnap.forEach((d) => prayers.push({ id: d.id, ...d.data() }));
-      setPanelPrayers(prayers);
-      setPanelLoading(false);
+      // Prayers shared to a circle are meant for its members — skip for
+      // non-members and clear any stale list.
+      if (!isMemberOfSelected) {
+        if (!cancelled) {
+          setPanelPrayers([]);
+          setPanelLoading(false);
+        }
+        return;
+      }
+
+      try {
+        const psnap = await getDocs(
+          query(
+            collection(db, 'prayers'),
+            where('circleIds', 'array-contains', selected.id),
+            orderBy('createdAt', 'desc')
+          )
+        );
+        if (cancelled) return;
+        const prayers = [];
+        psnap.forEach((d) => prayers.push({ id: d.id, ...d.data() }));
+        setPanelPrayers(prayers);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load circle prayers', err);
+        if (!cancelled) setPanelPrayers([]);
+      } finally {
+        if (!cancelled) setPanelLoading(false);
+      }
     }
     load();
     return () => {
