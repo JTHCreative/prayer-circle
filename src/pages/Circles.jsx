@@ -18,7 +18,8 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
-import { TrashIcon } from '../components/icons.jsx';
+import { PrayIcon, TrashIcon } from '../components/icons.jsx';
+import { togglePraying } from '../utils/prayers.js';
 
 // Gentle gradient palettes for each bubble so the space has visual variety
 // while still living in the app's blue/purple family.
@@ -427,6 +428,31 @@ export default function Circles() {
     setSelected(null);
   }
 
+  async function handleTogglePrayerPray(prayer) {
+    const wasPraying = (prayer.prayedBy || []).includes(user.uid);
+    await togglePraying(user, prayer);
+    setPanelPrayers((prev) =>
+      prev.map((p) =>
+        p.id === prayer.id
+          ? {
+              ...p,
+              prayedBy: wasPraying
+                ? (p.prayedBy || []).filter((u) => u !== user.uid)
+                : [...(p.prayedBy || []), user.uid],
+              prayedCount: (p.prayedCount || 0) + (wasPraying ? -1 : 1)
+            }
+          : p
+      )
+    );
+  }
+
+  async function handleDeletePrayer(prayer) {
+    if (prayer.authorId !== user.uid) return;
+    if (!confirm('Delete this prayer?')) return;
+    await deleteDoc(doc(db, 'prayers', prayer.id));
+    setPanelPrayers((prev) => prev.filter((p) => p.id !== prayer.id));
+  }
+
   async function handleCreate({ name, description }) {
     const ref = await addDoc(collection(db, 'circles'), {
       name: name.trim(),
@@ -625,8 +651,11 @@ export default function Circles() {
           members={panelMembers}
           prayers={panelPrayers}
           loading={panelLoading}
+          currentUserId={user.uid}
           onClose={() => setSelected(null)}
           onPrayerCreated={(prayer) => setPanelPrayers((prev) => [prayer, ...prev])}
+          onPrayerPray={handleTogglePrayerPray}
+          onPrayerDelete={handleDeletePrayer}
         />
       )}
 
@@ -888,7 +917,17 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
   );
 }
 
-function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPrayerCreated }) {
+function CircleDetailPanel({
+  circle,
+  members,
+  prayers,
+  loading,
+  currentUserId,
+  onClose,
+  onPrayerCreated,
+  onPrayerPray,
+  onPrayerDelete
+}) {
   const trackRef = useRef(null);
   const panelRef = useRef(null);
   const dragRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
@@ -1034,37 +1073,65 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPraye
               onPointerUp={handleTrackPointerUp}
               onPointerCancel={handleTrackPointerUp}
             >
-              {prayers.map((p) => (
-                <article key={p.id} className="prayer-swipe-card">
-                  <header className="prayer-swipe-card-header">
-                    <Avatar
-                      user={{
-                        displayName: p.authorName,
-                        photoURL: p.authorPhotoURL,
-                        username: p.authorUsername
-                      }}
-                      size={36}
-                    />
-                    <div className="prayer-swipe-card-identity">
-                      <strong>{p.authorName || 'Someone'}</strong>
-                      {p.authorUsername && (
-                        <small className="muted">@{p.authorUsername}</small>
+              {prayers.map((p) => {
+                const praying = (p.prayedBy || []).includes(currentUserId);
+                const mine = p.authorId === currentUserId;
+                return (
+                  <article key={p.id} className="prayer-swipe-card">
+                    <header className="prayer-swipe-card-header">
+                      <Avatar
+                        user={{
+                          displayName: p.authorName,
+                          photoURL: p.authorPhotoURL,
+                          username: p.authorUsername
+                        }}
+                        size={36}
+                      />
+                      <div className="prayer-swipe-card-identity">
+                        <strong>{p.authorName || 'Someone'}</strong>
+                        {p.authorUsername && (
+                          <small className="muted">@{p.authorUsername}</small>
+                        )}
+                      </div>
+                    </header>
+                    <p className="prayer-swipe-card-text">{p.text}</p>
+                    {p.createdAt?.toDate && (
+                      <time className="prayer-swipe-card-date muted">
+                        {p.createdAt.toDate().toLocaleString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: 'numeric',
+                          minute: '2-digit'
+                        })}
+                      </time>
+                    )}
+                    <div className="prayer-swipe-card-footer">
+                      <button
+                        type="button"
+                        className={praying ? 'pray-btn prayed' : 'pray-btn'}
+                        onClick={() => onPrayerPray(p)}
+                      >
+                        <PrayIcon size={16} />
+                        <span>{praying ? 'Praying' : 'Pray'}</span>
+                        {p.prayedCount ? (
+                          <span className="pray-count">{p.prayedCount}</span>
+                        ) : null}
+                      </button>
+                      {mine && (
+                        <button
+                          type="button"
+                          className="trash-btn"
+                          onClick={() => onPrayerDelete(p)}
+                          aria-label="Delete prayer"
+                          title="Delete prayer"
+                        >
+                          <TrashIcon size={16} />
+                        </button>
                       )}
                     </div>
-                  </header>
-                  <p className="prayer-swipe-card-text">{p.text}</p>
-                  {p.createdAt?.toDate && (
-                    <time className="prayer-swipe-card-date muted">
-                      {p.createdAt.toDate().toLocaleString(undefined, {
-                        month: 'short',
-                        day: 'numeric',
-                        hour: 'numeric',
-                        minute: '2-digit'
-                      })}
-                    </time>
-                  )}
-                </article>
-              ))}
+                  </article>
+                );
+              })}
               <NewPrayerCard
                 circle={circle}
                 hasExistingPrayers={hasPrayers}
