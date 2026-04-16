@@ -1,19 +1,18 @@
-// Number of full days since the Unix epoch in the viewer's local timezone.
-// We want the rotation to flip at local midnight rather than UTC, so compute
-// against a local YYYY-MM-DD anchor.
-function localDayNumber(now = new Date()) {
-  const y = now.getFullYear();
-  const m = now.getMonth();
-  const d = now.getDate();
-  return Math.floor(Date.UTC(y, m, d) / 86_400_000);
+// Number of completed `intervalHours` blocks since the Unix epoch. Used to
+// pick a deterministic item from a list that rotates on a fixed cadence
+// (e.g. every 4 hours). The block boundary aligns to UTC midnight, so a
+// 4-hour cadence flips at 00:00, 04:00, 08:00, … UTC.
+function intervalBlockNumber(intervalHours, now = new Date()) {
+  const ms = intervalHours * 60 * 60 * 1000;
+  return Math.floor(now.getTime() / ms);
 }
 
-// Pick an item from an array deterministically by day. Pass an `offset` if
-// you want two lists (e.g. verses vs. images) to decouple their cycles so
-// the same pairing doesn't repeat in lockstep.
-export function pickDaily(array, offset = 0) {
+// Pick an item from an array deterministically by time interval. Pass an
+// `offset` to decouple two lists (e.g. verses vs. images) so the same
+// pairing doesn't repeat in lockstep.
+export function pickByInterval(array, intervalHours = 24, offset = 0) {
   if (!array.length) return null;
-  const day = localDayNumber();
-  const index = ((day + offset) % array.length + array.length) % array.length;
+  const block = intervalBlockNumber(intervalHours);
+  const index = ((block + offset) % array.length + array.length) % array.length;
   return array[index];
 }

@@ -887,8 +887,8 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   border: 1.5px solid transparent;
   background:
     linear-gradient(#0b1227, #0b1227) padding-box,
-    var(--btn-gradient) border-box;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.14), 0 0 8px rgba(168, 85, 247, 0.08);
+    linear-gradient(135deg, #f97316 0%, #ef4444 50%, #b91c1c 100%) border-box;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.18), 0 0 8px rgba(249, 115, 22, 0.15);
   margin-bottom: 18px;
 }
 .verse-bg {
