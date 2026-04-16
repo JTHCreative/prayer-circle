@@ -237,40 +237,37 @@ export default function NewPrayer() {
               {friends.length === 0 ? (
                 <p className="muted">You haven't added any friends yet.</p>
               ) : (
-                <ul className="new-prayer-selector-list">
+                <div className="new-prayer-friend-grid">
                   {friends.map((f) => {
                     const checked = targetUserId === f.id;
                     return (
-                      <li key={f.id}>
-                        <button
-                          type="button"
-                          className={
-                            checked
-                              ? 'new-prayer-selector-row is-active'
-                              : 'new-prayer-selector-row'
-                          }
-                          onClick={() => setTargetUserId(f.id)}
-                          aria-pressed={checked}
-                        >
-                          <span className="person">
-                            <Avatar user={f} size={32} />
-                            <span>
-                              <strong>{f.displayName}</strong>
-                              {f.username && (
-                                <small className="muted">
-                                  {' '}· @{f.username}
-                                </small>
-                              )}
-                            </span>
+                      <button
+                        key={f.id}
+                        type="button"
+                        className={
+                          checked
+                            ? 'new-prayer-friend-tile is-active'
+                            : 'new-prayer-friend-tile'
+                        }
+                        onClick={() => setTargetUserId(f.id)}
+                        aria-pressed={checked}
+                        title={f.displayName}
+                      >
+                        <span className="new-prayer-friend-avatar">
+                          <Avatar user={f} size={60} />
+                        </span>
+                        <span className="new-prayer-friend-name">
+                          {f.displayName}
+                        </span>
+                        {f.username && (
+                          <span className="new-prayer-friend-handle">
+                            @{f.username}
                           </span>
-                          <span className="new-prayer-check" aria-hidden="true">
-                            {checked ? '✓' : ''}
-                          </span>
-                        </button>
-                      </li>
+                        )}
+                      </button>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
           )}
