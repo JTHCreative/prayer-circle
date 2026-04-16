@@ -38,33 +38,33 @@ export default function Globe() {
     mount.appendChild(renderer.domElement);
 
     // --- Lights --------------------------------------------------------------
-    // Strong ambient so the whole globe reads clearly, plus a key light for
-    // form, a fill light on the opposite side so the "night" side isn't
-    // pitch black, and a soft rim light to catch the edge.
-    const ambient = new THREE.AmbientLight(0xffffff, 1.1);
+    // Very bright ambient so the whole globe reads clearly from every angle,
+    // plus a key light for form, a strong fill light on the opposite side so
+    // the "night" side stays lit, and a rim light to catch the edge.
+    const ambient = new THREE.AmbientLight(0xffffff, 2.2);
     scene.add(ambient);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.4);
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
     keyLight.position.set(5, 3, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xb8cfff, 0.55);
+    const fillLight = new THREE.DirectionalLight(0xd6e4ff, 1.4);
     fillLight.position.set(-5, -1, -3);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xcdb4ff, 0.35);
+    const rimLight = new THREE.DirectionalLight(0xe4d6ff, 0.8);
     rimLight.position.set(-2, 4, -5);
     scene.add(rimLight);
 
     // --- Earth mesh ----------------------------------------------------------
     const geometry = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshPhongMaterial({
-      color: 0x889bb0, // fallback while the texture loads
+      color: 0xb8c6da, // fallback while the texture loads
       shininess: 4,
-      // Subtle blue self-illumination so continents stay readable even on
+      // Bright self-illumination so the texture colors read clearly even on
       // the shadowed side.
-      emissive: 0x0a1a3a,
-      emissiveIntensity: 0.35
+      emissive: 0x1a2f5c,
+      emissiveIntensity: 0.6
     });
     const earth = new THREE.Mesh(geometry, material);
     // Tilt so North is up-ish and it feels less static.
@@ -80,7 +80,8 @@ export default function Globe() {
         texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
         material.map = texture;
         material.emissiveMap = texture;    // use same texture for emissive tint
-        material.emissiveIntensity = 0.22; // keep the glow subtle
+        material.emissive.set(0xffffff);   // white emissive lets texture colors show fully
+        material.emissiveIntensity = 0.5;  // noticeable glow so the dark side stays readable
         material.color.set(0xffffff);
         material.needsUpdate = true;
       },
