@@ -557,14 +557,17 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   white-space: pre-wrap;
 }
 
-/* Ring of member avatars orbiting the expanded bubble */
+/* Ring of member avatars orbiting the expanded bubble — sits just outside
+   the bubble's edge so the description in the middle is unobstructed.
+   Fade-in is delayed past the bubble's snap-expand transition so the ring
+   doesn't appear floating before the bubble has reached full size. */
 .circle-bubble-ring {
   position: absolute;
   inset: 0;
   pointer-events: none;
   opacity: 0;
   animation:
-    circle-bubble-ring-in 400ms ease 240ms forwards,
+    circle-bubble-ring-in 360ms ease 360ms forwards,
     circle-bubble-ring-spin 45s linear infinite;
 }
 .circle-bubble-ring-item {
@@ -573,7 +576,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   top: 50%;
   width: 0;
   height: 0;
-  transform: rotate(var(--angle)) translateY(-155px);
+  transform: rotate(var(--angle)) translateY(-205px);
 }
 .circle-bubble-ring-counter {
   position: absolute;
@@ -591,6 +594,72 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 @keyframes circle-bubble-ring-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+/* Bubble category icons */
+.circle-bubble-icon { color: #fff; opacity: 0.95; margin-bottom: 2px; }
+.circle-bubble-icon-large { color: #fff; opacity: 0.96; margin-bottom: 4px; }
+
+/* Icon picker grid in the create-circle modal */
+.circle-icon-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  margin-top: 6px;
+}
+.circle-icon-option {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  box-shadow: none;
+}
+.circle-icon-option:hover {
+  background: #fff;
+  color: var(--primary);
+  transform: none;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.12);
+}
+.circle-icon-option.selected {
+  background: var(--btn-gradient);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.35);
+}
+.circle-icon-option.selected:hover {
+  background: var(--btn-gradient);
+  color: #fff;
+}
+
+/* Gradient color picker — circular swatches that mirror the bubble look. */
+.circle-gradient-picker {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+  margin-top: 6px;
+}
+.circle-gradient-option {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  border: 2.5px solid transparent;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+}
+.circle-gradient-option:hover {
+  transform: scale(1.06);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+}
+.circle-gradient-option.selected {
+  border-color: var(--text);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 3px 10px rgba(15, 23, 42, 0.18);
 }
 .circle-bubble-avatars {
   display: inline-flex;
@@ -898,16 +967,23 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   font-size: 12px;
 }
 
+.circle-bubble-edit,
 .circle-bubble-trash {
   width: 36px;
   height: 36px;
   padding: 0;
   border-radius: 999px;
   color: #fff;
-  background: rgba(220, 38, 38, 0.85);
   border: 1.5px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
+.circle-bubble-edit { background: rgba(255, 255, 255, 0.22); }
+.circle-bubble-edit:hover {
+  background: rgba(255, 255, 255, 0.38);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+.circle-bubble-trash { background: rgba(220, 38, 38, 0.85); }
 .circle-bubble-trash:hover {
   background: rgba(220, 38, 38, 1);
   transform: translateY(-1px);
@@ -924,15 +1000,15 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   line-height: 1;
   font-weight: 300;
   color: #fff;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(220, 38, 38, 0.55);
   border: none;
-  box-shadow: none;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
   letter-spacing: 0;
 }
 .circle-bubble-close:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(220, 38, 38, 0.78);
   transform: none;
-  box-shadow: none;
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.35);
 }
 
 /* ---------- Overlay (expanded circle + create form) ------------------ */

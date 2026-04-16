@@ -55,6 +55,16 @@ export function LockIcon(props) {
   );
 }
 
+// Pencil — used for edit affordance
+export function PencilIcon(props) {
+  return (
+    <Svg {...props}>
+      <path d="M14 4l6 6L8 22H2v-6z" />
+      <path d="M13 5l6 6" />
+    </Svg>
+  );
+}
+
 // Trash can — used for delete
 export function TrashIcon(props) {
   return (

@@ -18,18 +18,35 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
-import { PrayIcon, TrashIcon } from '../components/icons.jsx';
+import { PencilIcon, PrayIcon, TrashIcon } from '../components/icons.jsx';
+import { CircleIcon, CIRCLE_ICON_KEYS } from '../components/circleIcons.jsx';
 import { togglePraying } from '../utils/prayers.js';
 
-// Gentle gradient palettes for each bubble so the space has visual variety
-// while still living in the app's blue/purple family.
-const BUBBLE_THEMES = [
-  { from: '#3b82f6', to: '#8b5cf6' }, // blue -> violet
-  { from: '#6366f1', to: '#a855f7' }, // indigo -> purple
-  { from: '#0ea5e9', to: '#6366f1' }, // sky -> indigo
-  { from: '#8b5cf6', to: '#ec4899' }, // violet -> pink
-  { from: '#14b8a6', to: '#3b82f6' }  // teal -> blue
+// 2-color radial-gradient palettes a circle owner can pick from. The first
+// entry is the default for new circles. Older circles without a saved
+// gradientKey fall back to a hash-based pick from this same list, so the
+// canvas keeps some visual variety even before anyone customizes.
+const GRADIENT_PALETTES = [
+  { key: 'blue-purple',   from: '#3b82f6', to: '#8b5cf6' }, // default
+  { key: 'indigo-purple', from: '#6366f1', to: '#a855f7' },
+  { key: 'sky-indigo',    from: '#0ea5e9', to: '#6366f1' },
+  { key: 'violet-pink',   from: '#8b5cf6', to: '#ec4899' },
+  { key: 'teal-blue',     from: '#14b8a6', to: '#3b82f6' },
+  { key: 'rose-pink',     from: '#f43f5e', to: '#d946ef' },
+  { key: 'orange-red',    from: '#f97316', to: '#dc2626' },
+  { key: 'amber-orange',  from: '#f59e0b', to: '#ea580c' },
+  { key: 'green-teal',    from: '#10b981', to: '#06b6d4' },
+  { key: 'slate-gray',    from: '#475569', to: '#94a3b8' }
 ];
+const DEFAULT_GRADIENT_KEY = GRADIENT_PALETTES[0].key;
+const GRADIENT_BY_KEY = Object.fromEntries(GRADIENT_PALETTES.map((g) => [g.key, g]));
+
+function getCircleGradient(circle) {
+  if (circle.gradientKey && GRADIENT_BY_KEY[circle.gradientKey]) {
+    return GRADIENT_BY_KEY[circle.gradientKey];
+  }
+  return GRADIENT_PALETTES[hashId(circle.id) % GRADIENT_PALETTES.length];
+}
 
 function hashId(id) {
   let h = 0;
@@ -37,9 +54,16 @@ function hashId(id) {
   return Math.abs(h);
 }
 
+// Bubble diameters by community size — three tiers so a circle's heft on
+// the canvas tracks how active it is rather than scaling continuously.
+const BUBBLE_SIZE_SMALL = 90;
+const BUBBLE_SIZE_MEDIUM = 130;
+const BUBBLE_SIZE_LARGE = 175;
 function bubbleSize(memberCount) {
-  const base = 80;
-  return Math.min(170, base + Math.sqrt(memberCount || 1) * 22);
+  const n = memberCount || 1;
+  if (n >= 21) return BUBBLE_SIZE_LARGE;
+  if (n >= 6) return BUBBLE_SIZE_MEDIUM;
+  return BUBBLE_SIZE_SMALL;
 }
 
 function chunk(arr, size) {
@@ -58,6 +82,7 @@ export default function Circles() {
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState(null); // circle or null
   const [inviting, setInviting] = useState(null); // circle or null
   const [panelMembers, setPanelMembers] = useState([]);
   const [panelPrayers, setPanelPrayers] = useState([]);
@@ -202,11 +227,9 @@ export default function Circles() {
     dataRef.current = circles.map((c) => {
       const members = c.members?.length || 1;
       const size = bubbleSize(members);
-      const themeIndex = hashId(c.id) % BUBBLE_THEMES.length;
       return {
         id: c.id,
         size,
-        themeIndex,
         x: Math.random() * Math.max(0, rect.width - size),
         y: Math.random() * Math.max(0, rect.height - size),
         vx: (Math.random() - 0.5) * 0.5,
@@ -453,10 +476,12 @@ export default function Circles() {
     setPanelPrayers((prev) => prev.filter((p) => p.id !== prayer.id));
   }
 
-  async function handleCreate({ name, description }) {
+  async function handleCreate({ name, description, iconKey, gradientKey }) {
     const ref = await addDoc(collection(db, 'circles'), {
       name: name.trim(),
       description: description.trim(),
+      iconKey: iconKey || '',
+      gradientKey: gradientKey || DEFAULT_GRADIENT_KEY,
       createdBy: user.uid,
       members: [user.uid],
       createdAt: serverTimestamp()
@@ -471,6 +496,8 @@ export default function Circles() {
         id: ref.id,
         name: name.trim(),
         description: description.trim(),
+        iconKey: iconKey || '',
+        gradientKey: gradientKey || DEFAULT_GRADIENT_KEY,
         createdBy: user.uid,
         members: [user.uid],
         createdAt: null
@@ -478,6 +505,23 @@ export default function Circles() {
       ...prev
     ]);
     setCreating(false);
+  }
+
+  async function handleEdit(circleId, { name, description, iconKey, gradientKey }) {
+    const updates = {
+      name: name.trim(),
+      description: description.trim(),
+      iconKey: iconKey || '',
+      gradientKey: gradientKey || DEFAULT_GRADIENT_KEY
+    };
+    await updateDoc(doc(db, 'circles', circleId), updates);
+    setCircles((prev) =>
+      prev.map((c) => (c.id === circleId ? { ...c, ...updates } : c))
+    );
+    setSelected((prev) =>
+      prev && prev.id === circleId ? { ...prev, ...updates } : prev
+    );
+    setEditing(null);
   }
 
   return (
@@ -511,7 +555,7 @@ export default function Circles() {
         )}
         {circles.map((c) => {
           const data = dataRef.current.find((d) => d.id === c.id);
-          const theme = BUBBLE_THEMES[(data?.themeIndex ?? 0)];
+          const theme = getCircleGradient(c);
           const baseSize = data?.size ?? bubbleSize(c.members?.length || 1);
           const isExpanded = selected?.id === c.id;
           const memberCount = (c.members || []).length;
@@ -552,6 +596,13 @@ export default function Circles() {
             >
               {!isExpanded && (
                 <>
+                  {c.iconKey && (
+                    <CircleIcon
+                      name={c.iconKey}
+                      size={Math.max(20, Math.floor(baseSize * 0.32))}
+                      className="circle-bubble-icon"
+                    />
+                  )}
                   <span className="circle-bubble-name">{c.name}</span>
                   <span className="circle-bubble-count">{memberCount}</span>
                 </>
@@ -588,6 +639,13 @@ export default function Circles() {
                     >
                       ×
                     </button>
+                    {c.iconKey && (
+                      <CircleIcon
+                        name={c.iconKey}
+                        size={48}
+                        className="circle-bubble-icon-large"
+                      />
+                    )}
                     <h2 className="circle-bubble-title">{c.name}</h2>
                     <p className="circle-bubble-meta">
                       {memberCount} {memberCount === 1 ? 'member' : 'members'}
@@ -630,18 +688,32 @@ export default function Circles() {
                         </button>
                       )}
                       {c.createdBy === user.uid && (
-                        <button
-                          type="button"
-                          className="circle-bubble-trash"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDelete(c);
-                          }}
-                          aria-label="Delete circle"
-                          title="Delete circle"
-                        >
-                          <TrashIcon size={16} />
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            className="circle-bubble-edit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setEditing(c);
+                            }}
+                            aria-label="Edit circle"
+                            title="Edit circle"
+                          >
+                            <PencilIcon size={16} />
+                          </button>
+                          <button
+                            type="button"
+                            className="circle-bubble-trash"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(c);
+                            }}
+                            aria-label="Delete circle"
+                            title="Delete circle"
+                          >
+                            <TrashIcon size={16} />
+                          </button>
+                        </>
                       )}
                     </div>
                   </div>
@@ -667,9 +739,24 @@ export default function Circles() {
       )}
 
       {creating && (
-        <CreateCircleModal
+        <CircleEditorModal
+          mode="create"
           onCancel={() => setCreating(false)}
-          onCreate={handleCreate}
+          onSubmit={handleCreate}
+        />
+      )}
+
+      {editing && (
+        <CircleEditorModal
+          mode="edit"
+          initialValues={{
+            name: editing.name || '',
+            description: editing.description || '',
+            iconKey: editing.iconKey || '',
+            gradientKey: editing.gradientKey || DEFAULT_GRADIENT_KEY
+          }}
+          onCancel={() => setEditing(null)}
+          onSubmit={(values) => handleEdit(editing.id, values)}
         />
       )}
 
@@ -686,11 +773,17 @@ export default function Circles() {
   );
 }
 
-function CreateCircleModal({ onCancel, onCreate }) {
-  const [name, setName] = useState('');
-  const [description, setDescription] = useState('');
+function CircleEditorModal({ mode = 'create', initialValues, onCancel, onSubmit }) {
+  const [name, setName] = useState(initialValues?.name || '');
+  const [description, setDescription] = useState(initialValues?.description || '');
+  const [iconKey, setIconKey] = useState(initialValues?.iconKey || '');
+  const [gradientKey, setGradientKey] = useState(
+    initialValues?.gradientKey || DEFAULT_GRADIENT_KEY
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+
+  const isEdit = mode === 'edit';
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -698,7 +791,7 @@ function CreateCircleModal({ onCancel, onCreate }) {
     setBusy(true);
     setError('');
     try {
-      await onCreate({ name, description });
+      await onSubmit({ name, description, iconKey, gradientKey });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -717,7 +810,7 @@ function CreateCircleModal({ onCancel, onCreate }) {
         >
           ×
         </button>
-        <h2>Create a prayer circle</h2>
+        <h2>{isEdit ? 'Edit prayer circle' : 'Create a prayer circle'}</h2>
         <form onSubmit={handleSubmit}>
           <label>
             Name
@@ -732,10 +825,45 @@ function CreateCircleModal({ onCancel, onCreate }) {
               placeholder="What is this circle about?"
             />
           </label>
+          <div>
+            <p className="label">Icon (optional)</p>
+            <div className="circle-icon-picker">
+              {CIRCLE_ICON_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`circle-icon-option${iconKey === key ? ' selected' : ''}`}
+                  onClick={() => setIconKey((prev) => (prev === key ? '' : key))}
+                  aria-label={`${key} icon`}
+                  aria-pressed={iconKey === key}
+                >
+                  <CircleIcon name={key} size={22} />
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="label">Color</p>
+            <div className="circle-gradient-picker">
+              {GRADIENT_PALETTES.map((g) => (
+                <button
+                  key={g.key}
+                  type="button"
+                  className={`circle-gradient-option${gradientKey === g.key ? ' selected' : ''}`}
+                  style={{
+                    background: `radial-gradient(circle at 30% 25%, ${g.from} 0%, ${g.to} 100%)`
+                  }}
+                  onClick={() => setGradientKey(g.key)}
+                  aria-label={`${g.key} gradient`}
+                  aria-pressed={gradientKey === g.key}
+                />
+              ))}
+            </div>
+          </div>
           {error && <p className="error">{error}</p>}
           <div className="overlay-actions">
             <button type="submit" disabled={busy}>
-              {busy ? 'Creating…' : 'Create circle'}
+              {busy ? (isEdit ? 'Saving…' : 'Creating…') : isEdit ? 'Save changes' : 'Create circle'}
             </button>
           </div>
         </form>
