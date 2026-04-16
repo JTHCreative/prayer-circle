@@ -1507,6 +1507,28 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
 }
 
+/* Scrollable inner layer. Hosts the tall lattice + circle grid and owns
+   the grab-drag pan gesture. Touch scrolling is preserved for mobile. */
+.friends-network-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  cursor: grab;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.friends-network-scroll::-webkit-scrollbar { display: none; }
+.friends-network-scroll.is-grabbing,
+.friends-network-scroll.is-grabbing * { cursor: grabbing !important; }
+
+.friends-network-inner {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  height: calc(var(--inner-rows, 20) * var(--cell));
+}
+
 .friends-network-lines {
   position: absolute;
   inset: 0;
@@ -1517,18 +1539,10 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
     linear-gradient(to bottom, rgba(99, 102, 241, 0.32) 0 2px, transparent 2px);
   background-size: var(--cell) var(--cell);
   background-position: 50% 50%;
-  -webkit-mask-image: radial-gradient(
-    ellipse 65% 70% at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 55%,
-    transparent 100%
-  );
-  mask-image: radial-gradient(
-    ellipse 65% 70% at center,
-    #000 0%,
-    rgba(0, 0, 0, 0.55) 55%,
-    transparent 100%
-  );
+  -webkit-mask-image:
+    radial-gradient(ellipse 65% 50% at center, #000 0%, rgba(0, 0, 0, 0.55) 60%, transparent 100%);
+  mask-image:
+    radial-gradient(ellipse 65% 50% at center, #000 0%, rgba(0, 0, 0, 0.55) 60%, transparent 100%);
 }
 
 /* Floating search pill — centered along the top of the window. */
@@ -1726,23 +1740,23 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   transition: transform 0.18s ease, box-shadow 0.18s ease,
     background 0.18s ease, border-color 0.18s ease;
 }
-/* Darker, obviously-clickable empty slot with a soft + glyph. Uses a
-   button element so keyboard users can activate it. */
+/* Opaque empty slot — its own fill so it clearly reads as a placeholder
+   on top of the line pattern rather than letting the lines show through. */
 .friends-network-circle-empty {
-  background: rgba(99, 102, 241, 0.08);
-  border: 2px solid rgba(99, 102, 241, 0.35);
-  color: rgba(79, 70, 229, 0.55);
+  background: #dfe5f6;
+  border: 2px solid rgba(79, 70, 229, 0.4);
+  color: rgba(79, 70, 229, 0.65);
   padding: 0;
   cursor: pointer;
-  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.12), 0 2px 6px rgba(15, 23, 42, 0.08);
 }
 .friends-network-circle-empty:hover,
 .friends-network-circle-empty:focus-visible {
-  background: rgba(99, 102, 241, 0.16);
-  border-color: rgba(79, 70, 229, 0.7);
-  color: rgba(79, 70, 229, 0.9);
+  background: #ccd5f2;
+  border-color: rgba(79, 70, 229, 0.75);
+  color: rgba(79, 70, 229, 0.95);
   transform: translateY(-2px);
-  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.22);
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.26);
 }
 .friends-network-circle-empty svg {
   width: 22px;

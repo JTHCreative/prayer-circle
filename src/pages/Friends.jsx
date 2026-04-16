@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   arrayRemove,
   arrayUnion,
@@ -32,6 +32,9 @@ function friendRequestNotifId(fromUid) {
 // The interactive window draws a lattice of profile circles at fixed columns.
 const GRID_COLS = 6;
 const GRID_MIN_ROWS = 4;
+// Extra empty rows padded above and below the friends grid so the window
+// can be dragged / scrolled up and down into blank lattice space.
+const GRID_PAD_ROWS = 8;
 
 export default function Friends() {
   const { user, profile, refreshProfile } = useAuth();
@@ -43,11 +46,81 @@ export default function Friends() {
   const [status, setStatus] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     loadFriendshipData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile]);
+
+  // Click-and-drag vertical panning. Any pointerdown on the scroll area
+  // that isn't on an interactive element (a friend circle, + button, etc.)
+  // starts a grab, and pointermoves translate into scrollTop updates.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    let dragging = false;
+    let startY = 0;
+    let startScrollTop = 0;
+    let startX = 0;
+    let pointerId = null;
+
+    function onDown(e) {
+      if (e.target.closest('button, a, input, .friends-network-node')) return;
+      dragging = true;
+      startY = e.clientY;
+      startX = e.clientX;
+      startScrollTop = el.scrollTop;
+      pointerId = e.pointerId;
+      el.classList.add('is-grabbing');
+    }
+    function onMove(e) {
+      if (!dragging) return;
+      const dy = e.clientY - startY;
+      const dx = e.clientX - startX;
+      // Only hijack once the gesture clearly becomes a drag so short
+      // clicks (on empty lattice cells that bubble up) still feel snappy.
+      if (Math.abs(dy) + Math.abs(dx) < 4) return;
+      el.scrollTop = startScrollTop - dy;
+      if (pointerId != null) {
+        try {
+          el.setPointerCapture(pointerId);
+        } catch {
+          /* ignore */
+        }
+      }
+    }
+    function onUp(e) {
+      dragging = false;
+      el.classList.remove('is-grabbing');
+      if (pointerId != null) {
+        try {
+          el.releasePointerCapture(pointerId);
+        } catch {
+          /* ignore */
+        }
+        pointerId = null;
+      }
+    }
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointercancel', onUp);
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointercancel', onUp);
+    };
+  }, []);
+
+  // Center the scroll position so users see the friends grid on load and
+  // can drag in either direction from there.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = Math.max(0, (el.scrollHeight - el.clientHeight) / 2);
+  }, [friends.length]);
 
   async function loadFriendshipData() {
     if (!user) return;
@@ -212,14 +285,16 @@ export default function Friends() {
     setStatus('');
   }
 
-  const { cells, rows } = useMemo(() => {
+  const { cells, rows, innerRows } = useMemo(() => {
     const rowCount = Math.max(
       GRID_MIN_ROWS,
       Math.ceil(friends.length / GRID_COLS) || GRID_MIN_ROWS
     );
     const total = rowCount * GRID_COLS;
     const list = Array.from({ length: total }, (_, i) => friends[i] || null);
-    return { cells: list, rows: rowCount };
+    // Pad the scrollable inner area with extra empty lattice rows above
+    // and below the grid so it can be dragged further than the content.
+    return { cells: list, rows: rowCount, innerRows: rowCount + GRID_PAD_ROWS * 2 };
   }, [friends]);
 
   return (
@@ -235,8 +310,6 @@ export default function Friends() {
       </div>
 
       <div className="friends-network">
-        <div className="friends-network-lines" aria-hidden="true" />
-
         <div className="friends-network-search-wrap">
           <form onSubmit={handleSearch} className="friends-network-search">
             <input
@@ -357,32 +430,40 @@ export default function Friends() {
           )}
         </div>
 
-        <div
-          className="friends-network-grid"
-          style={{ '--cols': GRID_COLS, '--rows': rows }}
-        >
-          {cells.map((u, i) => {
-            const row = Math.floor(i / GRID_COLS);
-            const classes = ['friends-network-cell'];
-            if (row === 0) classes.push('is-first-row');
-            return (
-              <div key={i} className={classes.join(' ')}>
-                {u ? (
-                  <FriendNode user={u} onRemove={() => removeFriend(u.id)} />
-                ) : (
-                  <button
-                    type="button"
-                    className="friends-network-circle friends-network-circle-empty"
-                    onClick={() => setAddOpen(true)}
-                    aria-label="Add a friend"
-                    title="Add a friend"
-                  >
-                    <PlusIcon />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+        <div className="friends-network-scroll" ref={scrollRef}>
+          <div
+            className="friends-network-inner"
+            style={{ '--inner-rows': innerRows }}
+          >
+            <div className="friends-network-lines" aria-hidden="true" />
+            <div
+              className="friends-network-grid"
+              style={{ '--cols': GRID_COLS, '--rows': rows }}
+            >
+              {cells.map((u, i) => {
+                const row = Math.floor(i / GRID_COLS);
+                const classes = ['friends-network-cell'];
+                if (row === 0) classes.push('is-first-row');
+                return (
+                  <div key={i} className={classes.join(' ')}>
+                    {u ? (
+                      <FriendNode user={u} onRemove={() => removeFriend(u.id)} />
+                    ) : (
+                      <button
+                        type="button"
+                        className="friends-network-circle friends-network-circle-empty"
+                        onClick={() => setAddOpen(true)}
+                        aria-label="Add a friend"
+                        title="Add a friend"
+                      >
+                        <PlusIcon />
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
 
