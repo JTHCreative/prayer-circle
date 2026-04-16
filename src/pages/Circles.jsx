@@ -24,39 +24,16 @@ import { CircleIcon, CIRCLE_ICON_KEYS } from '../components/circleIcons.jsx';
 import { togglePraying } from '../utils/prayers.js';
 import { chunk } from '../utils/arrays.js';
 import { sendCircleInviteNotification } from '../utils/notifications.js';
+import {
+  DEFAULT_GRADIENT_KEY,
+  GRADIENT_PALETTES,
+  getCircleGradient
+} from '../utils/circleGradients.js';
 
 // 2-color radial-gradient palettes a circle owner can pick from. The first
 // entry is the default for new circles. Older circles without a saved
 // gradientKey fall back to a hash-based pick from this same list, so the
 // canvas keeps some visual variety even before anyone customizes.
-const GRADIENT_PALETTES = [
-  { key: 'blue-purple',   from: '#3b82f6', to: '#8b5cf6' }, // default
-  { key: 'indigo-purple', from: '#6366f1', to: '#a855f7' },
-  { key: 'sky-indigo',    from: '#0ea5e9', to: '#6366f1' },
-  { key: 'violet-pink',   from: '#8b5cf6', to: '#ec4899' },
-  { key: 'teal-blue',     from: '#14b8a6', to: '#3b82f6' },
-  { key: 'rose-pink',     from: '#f43f5e', to: '#d946ef' },
-  { key: 'orange-red',    from: '#f97316', to: '#dc2626' },
-  { key: 'amber-orange',  from: '#f59e0b', to: '#ea580c' },
-  { key: 'green-teal',    from: '#10b981', to: '#06b6d4' },
-  { key: 'slate-gray',    from: '#475569', to: '#94a3b8' }
-];
-const DEFAULT_GRADIENT_KEY = GRADIENT_PALETTES[0].key;
-const GRADIENT_BY_KEY = Object.fromEntries(GRADIENT_PALETTES.map((g) => [g.key, g]));
-
-function getCircleGradient(circle) {
-  if (circle.gradientKey && GRADIENT_BY_KEY[circle.gradientKey]) {
-    return GRADIENT_BY_KEY[circle.gradientKey];
-  }
-  return GRADIENT_PALETTES[hashId(circle.id) % GRADIENT_PALETTES.length];
-}
-
-function hashId(id) {
-  let h = 0;
-  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
 // Bubble diameters by community size — three tiers so a circle's heft on
 // the canvas tracks how active it is rather than scaling continuously.
 const BUBBLE_SIZE_SMALL = 90;

@@ -18,11 +18,13 @@ import {
   PersonIcon,
   PublicIcon
 } from '../components/icons.jsx';
+import { CircleIcon } from '../components/circleIcons.jsx';
+import { circleBubbleBackground } from '../utils/circleGradients.js';
 
 const VISIBILITY_OPTIONS = [
   { key: 'public', label: 'Public', Icon: PublicIcon, helper: 'Anyone on Prayer Circle can see this.' },
-  { key: 'circles', label: 'My circles', Icon: CircleVisibilityIcon, helper: 'Only the prayer circles you pick.' },
-  { key: 'friend', label: 'One friend', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
+  { key: 'circles', label: 'My Circles', Icon: CircleVisibilityIcon, helper: 'Only the prayer circles you pick.' },
+  { key: 'friend', label: 'One Friend', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
 ];
 
 export default function NewPrayer() {
@@ -122,7 +124,7 @@ export default function NewPrayer() {
     <div className="circle-universe">
       <div className="circle-universe-header">
         <div>
-          <h1>New prayer</h1>
+          <h1>New Prayer</h1>
           <p className="muted">
             Share what's on your heart, then pick who should see it.
           </p>
@@ -182,50 +184,56 @@ export default function NewPrayer() {
 
           {visibility === 'circles' && (
             <div className="new-prayer-card new-prayer-selector">
-              <h3>Select circles</h3>
+              <h3>Select Circles</h3>
               {circles.length === 0 ? (
                 <p className="muted">
                   You haven't joined any prayer circles yet.
                 </p>
               ) : (
-                <ul className="new-prayer-selector-list">
+                <div className="new-prayer-circle-grid">
                   {circles.map((c) => {
                     const checked = selectedCircleIds.includes(c.id);
                     const memberCount = (c.members || []).length;
                     return (
-                      <li key={c.id}>
-                        <button
-                          type="button"
-                          className={
-                            checked
-                              ? 'new-prayer-selector-row is-active'
-                              : 'new-prayer-selector-row'
-                          }
-                          onClick={() => toggleCircle(c.id)}
-                          aria-pressed={checked}
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={
+                          checked
+                            ? 'new-prayer-bubble is-active'
+                            : 'new-prayer-bubble'
+                        }
+                        onClick={() => toggleCircle(c.id)}
+                        aria-pressed={checked}
+                        title={c.name}
+                      >
+                        <span
+                          className="new-prayer-bubble-fill"
+                          style={{ background: circleBubbleBackground(c) }}
                         >
-                          <span>
-                            <strong>{c.name}</strong>
-                            <small className="muted">
-                              {' '}· {memberCount}{' '}
-                              {memberCount === 1 ? 'member' : 'members'}
-                            </small>
+                          {c.iconKey && (
+                            <CircleIcon
+                              name={c.iconKey}
+                              size={26}
+                              className="new-prayer-bubble-icon"
+                            />
+                          )}
+                          <span className="new-prayer-bubble-name">{c.name}</span>
+                          <span className="new-prayer-bubble-count">
+                            {memberCount}
                           </span>
-                          <span className="new-prayer-check" aria-hidden="true">
-                            {checked ? '✓' : ''}
-                          </span>
-                        </button>
-                      </li>
+                        </span>
+                      </button>
                     );
                   })}
-                </ul>
+                </div>
               )}
             </div>
           )}
 
           {visibility === 'friend' && (
             <div className="new-prayer-card new-prayer-selector">
-              <h3>Select a friend</h3>
+              <h3>Select a Friend</h3>
               {friends.length === 0 ? (
                 <p className="muted">You haven't added any friends yet.</p>
               ) : (
