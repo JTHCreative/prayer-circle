@@ -891,6 +891,7 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
 function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPrayerCreated }) {
   const trackRef = useRef(null);
   const panelRef = useRef(null);
+  const dragRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
   const owner = members.find((m) => m.id === circle.createdBy);
   const otherMembers = members.filter((m) => m.id !== circle.createdBy);
 
@@ -907,6 +908,54 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPraye
     const step = firstCard ? firstCard.getBoundingClientRect().width + 12 : 280;
     track.scrollBy({ left: direction * step, behavior: 'smooth' });
   }
+
+  // Mouse/pointer drag to swipe through cards. Native horizontal touch pan
+  // already works via overflow-x: auto; this bridges the desktop gap.
+  function handleTrackPointerDown(e) {
+    // Don't hijack interactions with form controls inside the card.
+    if (e.target.closest('button, textarea, input, a, select')) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const track = trackRef.current;
+    if (!track) return;
+    dragRef.current.active = true;
+    dragRef.current.startX = e.clientX;
+    dragRef.current.startScroll = track.scrollLeft;
+    dragRef.current.moved = false;
+    track.classList.add('dragging');
+    try {
+      track.setPointerCapture(e.pointerId);
+    } catch {}
+  }
+  function handleTrackPointerMove(e) {
+    if (!dragRef.current.active) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const dx = e.clientX - dragRef.current.startX;
+    if (Math.abs(dx) > 4) dragRef.current.moved = true;
+    track.scrollLeft = dragRef.current.startScroll - dx;
+  }
+  function handleTrackPointerUp(e) {
+    if (!dragRef.current.active) return;
+    dragRef.current.active = false;
+    const track = trackRef.current;
+    if (track) {
+      track.classList.remove('dragging');
+      try {
+        track.releasePointerCapture(e.pointerId);
+      } catch {}
+    }
+    // Swallow the click that follows a meaningful drag so cards don't
+    // activate when the user was scrolling.
+    if (dragRef.current.moved) {
+      const suppress = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+      };
+      track?.addEventListener('click', suppress, { capture: true, once: true });
+    }
+  }
+
+  const hasPrayers = prayers.length > 0;
 
   return (
     <div
@@ -963,17 +1012,11 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPraye
 
       <section className="circle-detail-section">
         <h3>Prayer requests</h3>
-        {loading && prayers.length === 0 ? (
+        {loading && !hasPrayers ? (
           <p className="muted">Loading prayers…</p>
-        ) : prayers.length === 0 ? (
-          <div className="prayer-swipe">
-            <div className="prayer-swipe-track">
-              <NewPrayerCard circle={circle} onCreated={onPrayerCreated} />
-            </div>
-          </div>
         ) : (
           <div className="prayer-swipe">
-            {prayers.length > 1 && (
+            {hasPrayers && prayers.length > 1 && (
               <button
                 type="button"
                 className="prayer-swipe-nav prayer-swipe-prev"
@@ -983,7 +1026,14 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPraye
                 ‹
               </button>
             )}
-            <div className="prayer-swipe-track" ref={trackRef}>
+            <div
+              className="prayer-swipe-track"
+              ref={trackRef}
+              onPointerDown={handleTrackPointerDown}
+              onPointerMove={handleTrackPointerMove}
+              onPointerUp={handleTrackPointerUp}
+              onPointerCancel={handleTrackPointerUp}
+            >
               {prayers.map((p) => (
                 <article key={p.id} className="prayer-swipe-card">
                   <header className="prayer-swipe-card-header">
@@ -1015,8 +1065,13 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPraye
                   )}
                 </article>
               ))}
+              <NewPrayerCard
+                circle={circle}
+                hasExistingPrayers={hasPrayers}
+                onCreated={onPrayerCreated}
+              />
             </div>
-            {prayers.length > 1 && (
+            {hasPrayers && prayers.length > 1 && (
               <button
                 type="button"
                 className="prayer-swipe-nav prayer-swipe-next"
@@ -1048,7 +1103,7 @@ function MemberCircle({ user, size }) {
   );
 }
 
-function NewPrayerCard({ circle, onCreated }) {
+function NewPrayerCard({ circle, hasExistingPrayers, onCreated }) {
   const { user, profile } = useAuth();
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -1100,9 +1155,11 @@ function NewPrayerCard({ circle, onCreated }) {
 
   return (
     <form className="prayer-swipe-card prayer-swipe-card-new" onSubmit={handleSubmit}>
-      <h4>Share the first prayer</h4>
+      <h4>{hasExistingPrayers ? 'Add a prayer' : 'Share the first prayer'}</h4>
       <p className="muted">
-        Be the first to ask {circle.name} for prayer.
+        {hasExistingPrayers
+          ? `Post another request to ${circle.name}.`
+          : `Be the first to ask ${circle.name} for prayer.`}
       </p>
       <textarea
         rows={4}

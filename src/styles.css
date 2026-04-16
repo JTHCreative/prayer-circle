@@ -687,6 +687,14 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   -webkit-overflow-scrolling: touch;
   padding: 4px 4px 14px;
   scrollbar-width: thin;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x;
+}
+.prayer-swipe-track.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
 }
 .prayer-swipe-card {
   flex: 0 0 min(320px, 85%);
