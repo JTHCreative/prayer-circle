@@ -88,22 +88,28 @@ export function BookIcon(props) {
   );
 }
 
-// Praying hands — uses the native 🙏 emoji so every platform renders the
-// familiar glyph without us hand-rolling an SVG.
+// Praying hands — Phosphor Icons (regular weight), MIT licensed.
+// Source: https://github.com/phosphor-icons/core/blob/main/raw/regular/hands-praying.svg
 export function PrayIcon({ size = 18, label, className }) {
   return (
-    <span
+    <svg
       className={className}
-      style={{
-        fontSize: size,
-        lineHeight: 1,
-        display: 'inline-block'
-      }}
+      width={size}
+      height={size}
+      viewBox="0 0 256 256"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="16"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : 'presentation'}
     >
-      🙏
-    </span>
+      <path d="M141.78,16h0A13.77,13.77,0,0,1,155,25.78L192,148l20.27,20.27-45,43-29.94-29.94A32,32,0,0,1,128,158.75v-129A13.78,13.78,0,0,1,141.78,16Z" />
+      <path d="M167.31,211.31l18.35,18.35a8,8,0,0,0,11.31,0L229.66,197a8,8,0,0,0,0-11.31l-18.35-18.35" />
+      <path d="M118.63,181.37,88.69,211.31l-44-44L64,148,101,25.78A13.77,13.77,0,0,1,114.22,16h0A13.78,13.78,0,0,1,128,29.78v129A32,32,0,0,1,118.63,181.37Z" />
+      <path d="M44.69,167.31,26.34,185.66a8,8,0,0,0,0,11.31L59,229.66a8,8,0,0,0,11.31,0l18.35-18.35" />
+    </svg>
   );
 }
