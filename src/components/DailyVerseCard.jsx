@@ -1,11 +1,14 @@
 import { useMemo } from 'react';
 import { NATURE_IMAGES, PRAYER_VERSES } from '../data/verseCards.js';
-import { pickDaily } from '../utils/daily.js';
+import { pickByInterval } from '../utils/daily.js';
+
+const ROTATION_HOURS = 4;
 
 export default function DailyVerseCard() {
-  // Offset the image cycle so verse+image pairings shift independently.
-  const verse = useMemo(() => pickDaily(PRAYER_VERSES), []);
-  const image = useMemo(() => pickDaily(NATURE_IMAGES, 7), []);
+  // Rotate the verse + background every 4 hours. Offset the image cycle so
+  // verse+image pairings shift independently.
+  const verse = useMemo(() => pickByInterval(PRAYER_VERSES, ROTATION_HOURS), []);
+  const image = useMemo(() => pickByInterval(NATURE_IMAGES, ROTATION_HOURS, 7), []);
 
   return (
     <div

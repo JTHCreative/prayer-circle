@@ -58,12 +58,17 @@ export default function Circles() {
   const [selected, setSelected] = useState(null);
   const [creating, setCreating] = useState(false);
   const [inviting, setInviting] = useState(null); // circle or null
-  const [expandedMembers, setExpandedMembers] = useState([]);
+  const [panelMembers, setPanelMembers] = useState([]);
+  const [panelPrayers, setPanelPrayers] = useState([]);
+  const [panelLoading, setPanelLoading] = useState(false);
 
   const containerRef = useRef(null);
   const bubbleRefs = useRef({});
   const dataRef = useRef([]);
   const selectedRef = useRef(null);
+
+  const isMemberOfSelected =
+    !!selected && (selected.members || []).includes(user?.uid);
 
   useEffect(() => {
     selectedRef.current = selected;
@@ -72,33 +77,64 @@ export default function Circles() {
   // Expanded-bubble target size — used for positioning + CSS
   const EXPANDED_SIZE = 360;
 
-  // Lazy-load up to 3 member profiles when a bubble is expanded.
+  // Load full member list + (for members) the circle's prayer feed whenever
+  // a bubble is selected. Members feed the bubble's avatar preview AND the
+  // detail panel below the space.
   useEffect(() => {
     if (!selected) {
-      setExpandedMembers([]);
+      setPanelMembers([]);
+      setPanelPrayers([]);
+      setPanelLoading(false);
       return;
     }
     let cancelled = false;
     async function load() {
-      const ids = (selected.members || []).slice(0, 3);
-      if (ids.length === 0) {
-        if (!cancelled) setExpandedMembers([]);
-        return;
-      }
-      const all = [];
-      for (const group of chunk(ids, 10)) {
-        const snap = await getDocs(
-          query(collection(db, 'users'), where(documentId(), 'in', group))
+      setPanelLoading(true);
+      const memberIds = selected.members || [];
+      const memberTasks = [];
+      for (const group of chunk(memberIds, 10)) {
+        memberTasks.push(
+          getDocs(query(collection(db, 'users'), where(documentId(), 'in', group)))
         );
-        snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
       }
-      if (!cancelled) setExpandedMembers(all);
+      // Only fetch prayers if the viewer is part of the circle — prayers
+      // shared to a circle are meant for its members.
+      const prayersTask = isMemberOfSelected
+        ? getDocs(
+            query(
+              collection(db, 'prayers'),
+              where('circleIds', 'array-contains', selected.id),
+              orderBy('createdAt', 'desc')
+            )
+          )
+        : null;
+
+      const [memberSnaps, prayerSnap] = await Promise.all([
+        Promise.all(memberTasks),
+        prayersTask
+      ]);
+      if (cancelled) return;
+
+      const members = [];
+      for (const snap of memberSnaps) {
+        snap.forEach((d) => members.push({ id: d.id, ...d.data() }));
+      }
+      // Keep members in the order they appear in the circle so the creator
+      // doesn't jump around when more people join.
+      const indexById = new Map(memberIds.map((id, i) => [id, i]));
+      members.sort((a, b) => (indexById.get(a.id) ?? 0) - (indexById.get(b.id) ?? 0));
+      setPanelMembers(members);
+
+      const prayers = [];
+      if (prayerSnap) prayerSnap.forEach((d) => prayers.push({ id: d.id, ...d.data() }));
+      setPanelPrayers(prayers);
+      setPanelLoading(false);
     }
     load();
     return () => {
       cancelled = true;
     };
-  }, [selected?.id, selected?.members?.length]);
+  }, [selected?.id, selected?.members?.length, isMemberOfSelected]);
 
   // When selection changes, set a snap target so the bubble eases into
   // the center of the space with the expanded size.
@@ -502,12 +538,12 @@ export default function Circles() {
                     <p className="circle-bubble-desc">{c.description}</p>
                   )}
                   <div className="circle-bubble-avatars">
-                    {expandedMembers.map((m) => (
+                    {panelMembers.slice(0, 3).map((m) => (
                       <Avatar key={m.id} user={m} size={36} />
                     ))}
-                    {memberCount > expandedMembers.length && (
+                    {memberCount > Math.min(3, panelMembers.length) && (
                       <span className="circle-bubble-more">
-                        +{memberCount - expandedMembers.length}
+                        +{memberCount - Math.min(3, panelMembers.length)}
                       </span>
                     )}
                   </div>
@@ -566,6 +602,16 @@ export default function Circles() {
           );
         })}
       </div>
+
+      {selected && isMemberOfSelected && (
+        <CircleDetailPanel
+          circle={selected}
+          members={panelMembers}
+          prayers={panelPrayers}
+          loading={panelLoading}
+          onClose={() => setSelected(null)}
+        />
+      )}
 
       {creating && (
         <CreateCircleModal
@@ -821,6 +867,160 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
           {linkError && <p className="error">{linkError}</p>}
         </section>
       </div>
+    </div>
+  );
+}
+
+function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
+  const trackRef = useRef(null);
+  const panelRef = useRef(null);
+  const owner = members.find((m) => m.id === circle.createdBy);
+  const otherMembers = members.filter((m) => m.id !== circle.createdBy);
+
+  // Scroll the panel into view the first time it opens for this circle, so
+  // users on small screens see the new content without hunting for it.
+  useEffect(() => {
+    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [circle.id]);
+
+  function scrollPrayers(direction) {
+    const track = trackRef.current;
+    if (!track) return;
+    const firstCard = track.querySelector('.prayer-swipe-card');
+    const step = firstCard ? firstCard.getBoundingClientRect().width + 12 : 280;
+    track.scrollBy({ left: direction * step, behavior: 'smooth' });
+  }
+
+  return (
+    <div
+      className="circle-detail-panel"
+      ref={panelRef}
+      role="region"
+      aria-label={`${circle.name} details`}
+    >
+      <div className="circle-detail-header">
+        <div>
+          <h2>{circle.name}</h2>
+          <p className="muted">
+            {members.length} {members.length === 1 ? 'member' : 'members'}
+          </p>
+        </div>
+        <button
+          type="button"
+          className="circle-detail-close"
+          onClick={onClose}
+          aria-label="Close details"
+        >
+          ×
+        </button>
+      </div>
+
+      {circle.description && (
+        <p className="circle-detail-desc">{circle.description}</p>
+      )}
+
+      <section className="circle-detail-section">
+        <h3>Owner</h3>
+        {owner ? (
+          <div className="circle-detail-owner">
+            <Avatar user={owner} size={48} />
+            <span className="circle-detail-owner-name">
+              <strong>{owner.displayName || 'Unknown'}</strong>
+              {owner.username && (
+                <small className="muted">@{owner.username}</small>
+              )}
+            </span>
+          </div>
+        ) : loading ? (
+          <p className="muted">Loading…</p>
+        ) : (
+          <p className="muted">Unknown</p>
+        )}
+      </section>
+
+      <section className="circle-detail-section">
+        <h3>Members</h3>
+        {otherMembers.length === 0 && !loading && (
+          <p className="muted">Just the owner so far.</p>
+        )}
+        {otherMembers.length > 0 && (
+          <div className="circle-members-grid">
+            {otherMembers.map((m) => (
+              <div key={m.id} className="circle-member-item">
+                <Avatar user={m} size={56} />
+                <span className="circle-member-name">
+                  {m.displayName || m.username || '—'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section className="circle-detail-section">
+        <h3>Prayer requests</h3>
+        {loading && prayers.length === 0 ? (
+          <p className="muted">Loading prayers…</p>
+        ) : prayers.length === 0 ? (
+          <p className="muted">No prayers shared with this circle yet.</p>
+        ) : (
+          <div className="prayer-swipe">
+            {prayers.length > 1 && (
+              <button
+                type="button"
+                className="prayer-swipe-nav prayer-swipe-prev"
+                onClick={() => scrollPrayers(-1)}
+                aria-label="Previous prayer"
+              >
+                ‹
+              </button>
+            )}
+            <div className="prayer-swipe-track" ref={trackRef}>
+              {prayers.map((p) => (
+                <article key={p.id} className="prayer-swipe-card">
+                  <header className="prayer-swipe-card-header">
+                    <Avatar
+                      user={{
+                        displayName: p.authorName,
+                        photoURL: p.authorPhotoURL,
+                        username: p.authorUsername
+                      }}
+                      size={36}
+                    />
+                    <div className="prayer-swipe-card-identity">
+                      <strong>{p.authorName || 'Someone'}</strong>
+                      {p.authorUsername && (
+                        <small className="muted">@{p.authorUsername}</small>
+                      )}
+                    </div>
+                  </header>
+                  <p className="prayer-swipe-card-text">{p.text}</p>
+                  {p.createdAt?.toDate && (
+                    <time className="prayer-swipe-card-date muted">
+                      {p.createdAt.toDate().toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      })}
+                    </time>
+                  )}
+                </article>
+              ))}
+            </div>
+            {prayers.length > 1 && (
+              <button
+                type="button"
+                className="prayer-swipe-nav prayer-swipe-next"
+                onClick={() => scrollPrayers(1)}
+                aria-label="Next prayer"
+              >
+                ›
+              </button>
+            )}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
