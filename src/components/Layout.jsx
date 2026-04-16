@@ -24,8 +24,7 @@ export default function Layout() {
   const friendsPage = location.pathname === '/friends';
   const [pendingRequests, setPendingRequests] = useState(0);
 
-  // Drives the red dot on the Friends nav link. Counts pending friendships
-  // addressed to me (ones I didn't initiate).
+  // Counts pending requests I didn't initiate — drives the nav alert dot.
   useEffect(() => {
     if (!user?.uid) {
       setPendingRequests(0);

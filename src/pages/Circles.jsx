@@ -22,6 +22,8 @@ import PrayerCard from '../components/PrayerCard.jsx';
 import { PencilIcon, TrashIcon } from '../components/icons.jsx';
 import { CircleIcon, CIRCLE_ICON_KEYS } from '../components/circleIcons.jsx';
 import { togglePraying } from '../utils/prayers.js';
+import { chunk } from '../utils/arrays.js';
+import { sendCircleInviteNotification } from '../utils/notifications.js';
 
 // 2-color radial-gradient palettes a circle owner can pick from. The first
 // entry is the default for new circles. Older circles without a saved
@@ -67,11 +69,6 @@ function bubbleSize(memberCount) {
   return BUBBLE_SIZE_SMALL;
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}
 
 function clamp(value, lo, hi) {
   return Math.max(lo, Math.min(hi, value));
@@ -950,21 +947,15 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
 
   async function handleInviteFriend(friend) {
     if (invitedIds.has(friend.id)) return;
-    await setDoc(
-      doc(db, 'users', friend.id, 'notifications', `circle-invite-${circle.id}-${currentUserId}`),
-      {
-        type: 'circle_invite',
-        title: 'Prayer circle invite',
-        body: `@${inviter?.username || 'A friend'} invited you to join "${circle.name}".`,
-        circleId: circle.id,
-        circleName: circle.name,
-        fromUserId: currentUserId,
-        fromUsername: inviter?.username || '',
-        fromName: inviter?.displayName || '',
-        read: false,
-        createdAt: serverTimestamp()
+    await sendCircleInviteNotification({
+      toUserId: friend.id,
+      circle,
+      inviter: {
+        uid: currentUserId,
+        username: inviter?.username,
+        displayName: inviter?.displayName
       }
-    );
+    });
     setInvitedIds((prev) => {
       const next = new Set(prev);
       next.add(friend.id);
