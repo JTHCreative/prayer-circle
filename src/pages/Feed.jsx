@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   collection,
@@ -31,6 +31,7 @@ export default function Feed() {
   const [prayers, setPrayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const togglingRef = useRef(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -107,21 +108,36 @@ export default function Feed() {
   }, [tab, user, profile]);
 
   async function togglePrayed(prayer) {
+    // Drop rapid re-clicks on the same prayer: togglePraying reads
+    // prayer.prayedBy to decide direction, so concurrent calls with the
+    // same stale snapshot would all write +1 and stack the count.
+    if (togglingRef.current.has(prayer.id)) return;
+    togglingRef.current.add(prayer.id);
     const wasPraying = (prayer.prayedBy || []).includes(user.uid);
-    await togglePraying(user, prayer);
+    // Update UI before the network round-trip so the button flips
+    // immediately and the next render's prayer prop already has the new
+    // state (which is what the next onPray closure will capture).
     setPrayers((prev) =>
-      prev.map((p) =>
-        p.id === prayer.id
-          ? {
-              ...p,
-              prayedBy: wasPraying
-                ? (p.prayedBy || []).filter((u) => u !== user.uid)
-                : [...(p.prayedBy || []), user.uid],
-              prayedCount: (p.prayedCount || 0) + (wasPraying ? -1 : 1)
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id !== prayer.id) return p;
+        const current = p.prayedBy || [];
+        const prayedBy = wasPraying
+          ? current.filter((u) => u !== user.uid)
+          : current.includes(user.uid)
+            ? current
+            : [...current, user.uid];
+        return {
+          ...p,
+          prayedBy,
+          prayedCount: Math.max(0, (p.prayedCount || 0) + (wasPraying ? -1 : 1))
+        };
+      })
     );
+    try {
+      await togglePraying(user, prayer);
+    } finally {
+      togglingRef.current.delete(prayer.id);
+    }
   }
 
   async function handleDelete(prayer) {
