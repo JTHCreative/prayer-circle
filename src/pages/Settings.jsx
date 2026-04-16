@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useAuth } from '../context/AuthContext.jsx';
+import { BIO_MAX, useAuth } from '../context/AuthContext.jsx';
 import LocationSelect from '../components/LocationSelect.jsx';
 import Avatar from '../components/Avatar.jsx';
 
@@ -16,6 +16,7 @@ export default function Settings() {
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [location, setLocation] = useState('');
+  const [bio, setBio] = useState('');
   const [profileStatus, setProfileStatus] = useState('');
   const [profileError, setProfileError] = useState('');
   const [profileBusy, setProfileBusy] = useState(false);
@@ -38,6 +39,7 @@ export default function Settings() {
       setLastName(profile.lastName || '');
       setUsername(profile.username || '');
       setLocation(profile.location || '');
+      setBio(profile.bio || '');
     }
   }, [profile]);
 
@@ -47,7 +49,7 @@ export default function Settings() {
     setProfileStatus('');
     setProfileBusy(true);
     try {
-      await updateUserProfile({ firstName, lastName, username, location });
+      await updateUserProfile({ firstName, lastName, username, location, bio });
       setProfileStatus('Profile saved.');
     } catch (err) {
       setProfileError(err.message);
@@ -197,6 +199,19 @@ export default function Settings() {
               onChange={setLocation}
               placeholder="Select a city or region"
             />
+          </label>
+          <label>
+            About you <span className="muted">(optional)</span>
+            <textarea
+              value={bio}
+              onChange={(e) => setBio(e.target.value)}
+              maxLength={BIO_MAX}
+              rows={3}
+              placeholder="A sentence or two others will see on your profile card."
+            />
+            <small className="muted">
+              {bio.length}/{BIO_MAX} characters.
+            </small>
           </label>
           {profileError && <p className="error">{profileError}</p>}
           {profileStatus && <p className="muted">{profileStatus}</p>}

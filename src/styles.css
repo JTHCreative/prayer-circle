@@ -1486,90 +1486,287 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   border-color: var(--primary);
 }
 
-/* Friends grid */
-.friends-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
-  gap: 18px 12px;
-  padding: 8px 4px 4px;
-}
-.friends-grid-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.friends-grid-avatar {
+/* ---------- Friends network ---------------------------------------- */
+/* Matches the .circle-space look: soft radial glow, subtle border, inset
+   shadow. Profile circles sit on a lattice of connecting lines drawn by
+   each cell's ::before (right) + ::after (below) pseudo-elements. */
+.friends-network {
   position: relative;
-  padding: 0;
+  flex: 1;
+  min-height: 540px;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background:
+    radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
+    radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
+    linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
+  box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
+  padding: 96px 28px 32px;
+}
+
+.friends-network-search-wrap {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(520px, calc(100% - 40px));
+  z-index: 5;
+}
+.friends-network-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px 6px 14px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+}
+.friends-network-search input {
+  flex: 1;
   border: none;
   background: transparent;
-  border-radius: 999px;
-  cursor: pointer;
-  line-height: 0;
+  padding: 4px 4px;
+  font-size: 14px;
   box-shadow: none;
-  transition: transform 0.15s ease;
 }
-.friends-grid-avatar:hover,
-.friends-grid-avatar:focus-visible {
-  transform: translateY(-2px);
+.friends-network-search input:focus {
+  outline: none;
+  border: none;
+  background: transparent;
 }
-.friends-grid-avatar .avatar {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-.friends-grid-remove {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 22px;
-  height: 22px;
+.friends-network-search button[type='submit'] {
+  padding: 6px 14px;
+  font-size: 13px;
   border-radius: 999px;
-  background: var(--danger);
-  color: #fff;
-  font-size: 16px;
+}
+.friends-network-search-clear {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 18px;
   line-height: 1;
+  border-radius: 999px;
+  color: var(--muted);
+}
+.friends-network-search-status {
+  margin: 8px 4px 0;
+  font-size: 12px;
+  text-align: center;
+}
+.friends-network-search-results {
+  margin-top: 10px;
+  padding: 6px 4px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  max-height: 260px;
+  overflow-y: auto;
+}
+.friends-network-search-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 10px;
+}
+.friends-network-search-row + .friends-network-search-row {
+  border-top: 1px solid var(--border);
+}
+.friends-network-search-row button {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+
+/* The lattice itself. CSS grid with fixed columns so the ::before /
+   ::after connector lines align cleanly between neighbours. */
+.friends-network-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(var(--cols), 1fr);
+  grid-auto-rows: minmax(96px, 1fr);
+  height: 100%;
+  min-height: 380px;
+  place-items: center;
+  z-index: 1;
+}
+.friends-network-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
-  transform: scale(0.8);
-  transition: opacity 0.15s ease, transform 0.15s ease;
-  pointer-events: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
-.friends-grid-avatar:hover .friends-grid-remove,
-.friends-grid-avatar:focus-visible .friends-grid-remove {
-  opacity: 1;
-  transform: scale(1);
+/* Horizontal connector to the next cell on the right. */
+.friends-network-cell::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100%;
+  height: 2px;
+  background: rgba(99, 102, 241, 0.22);
+  transform: translateY(-50%);
+  z-index: 0;
 }
-.friends-grid-avatar-empty {
-  width: 72px;
-  height: 72px;
+/* Vertical connector down to the next cell below. */
+.friends-network-cell::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 2px;
+  height: 100%;
+  background: rgba(99, 102, 241, 0.22);
+  transform: translateX(-50%);
+  z-index: 0;
+}
+.friends-network-cell.is-last-col::before { display: none; }
+.friends-network-cell.is-last-row::after { display: none; }
+
+.friends-network-circle {
+  position: relative;
+  width: 60px;
+  height: 60px;
   border-radius: 999px;
-  background: var(--primary-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  z-index: 1;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+.friends-network-circle .avatar {
+  width: 56px;
+  height: 56px;
+  font-size: 26px;
+}
+.friends-network-circle-empty {
+  background: rgba(255, 255, 255, 0.55);
   border: 2px dashed var(--border);
-  cursor: default;
+  box-shadow: none;
+  opacity: 0.85;
 }
-.friends-grid-item-empty { opacity: 0.55; }
-.friends-grid-name {
-  font-size: 13px;
-  font-weight: 600;
+
+/* Node wraps the circle + hover card and owns the focus/hover state. */
+.friends-network-node {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  outline: none;
+  z-index: 2;
+}
+.friends-network-node:hover,
+.friends-network-node:focus-visible {
+  z-index: 20;
+}
+.friends-network-node:hover .friends-network-circle,
+.friends-network-node:focus-visible .friends-network-circle {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.28);
+}
+
+/* Floating profile card — mirrors .member-circle-tooltip but larger so it
+   can hold a photo, name, bio and region. */
+.friends-network-card {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(6px);
+  width: 240px;
+  padding: 14px 14px 12px;
+  background: #fff;
   color: var(--text);
-  text-align: center;
-  max-width: 100%;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 30;
+}
+.friends-network-card::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: #fff;
+}
+.friends-network-node:hover .friends-network-card,
+.friends-network-node:focus-visible .friends-network-card,
+.friends-network-card:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0);
+}
+.friends-network-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.friends-network-card-id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.friends-network-card-id strong {
+  font-size: 14px;
+  color: var(--text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-.friends-grid-handle {
-  font-size: 11px;
-  color: var(--muted);
-  text-align: center;
-  max-width: 100%;
+.friends-network-card-id .muted { font-size: 12px; }
+.friends-network-card-bio {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+  max-height: 4.5em;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+.friends-network-card-meta {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.friends-network-card-remove {
+  align-self: flex-start;
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+/* Top row: flip card below the circle so it doesn't collide with the
+   search bar overlay. */
+.friends-network-cell.is-first-row .friends-network-card {
+  bottom: auto;
+  top: calc(100% + 12px);
+  transform: translateX(-50%) translateY(-6px);
+}
+.friends-network-cell.is-first-row .friends-network-card::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: #fff;
+}
+.friends-network-cell.is-first-row .friends-network-node:hover .friends-network-card,
+.friends-network-cell.is-first-row .friends-network-node:focus-visible .friends-network-card {
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Notifications bell + dropdown */

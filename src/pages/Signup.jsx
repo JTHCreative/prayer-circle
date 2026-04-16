@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext.jsx';
+import { BIO_MAX, useAuth } from '../context/AuthContext.jsx';
 import LocationSelect from '../components/LocationSelect.jsx';
 
 export default function Signup() {
@@ -10,6 +10,7 @@ export default function Signup() {
   const [lastName, setLastName] = useState('');
   const [username, setUsername] = useState('');
   const [location, setLocation] = useState('');
+  const [bio, setBio] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -26,7 +27,8 @@ export default function Signup() {
         firstName,
         lastName,
         username,
-        location
+        location,
+        bio
       });
       navigate('/');
     } catch (err) {
@@ -71,6 +73,19 @@ export default function Signup() {
             onChange={setLocation}
             placeholder="Select a city or region"
           />
+        </label>
+        <label>
+          About you <span className="muted">(optional)</span>
+          <textarea
+            value={bio}
+            onChange={(e) => setBio(e.target.value)}
+            maxLength={BIO_MAX}
+            rows={3}
+            placeholder="A sentence or two others will see on your profile card."
+          />
+          <small className="muted">
+            {bio.length}/{BIO_MAX} characters.
+          </small>
         </label>
         <label>
           Email

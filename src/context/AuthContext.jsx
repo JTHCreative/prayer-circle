@@ -25,6 +25,8 @@ const AuthContext = createContext(null);
 
 // Usernames: 3-20 chars, lowercase letters/numbers/underscore
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
+// Short freeform bio shown on profile hover cards.
+export const BIO_MAX = 240;
 
 function normalizeUsername(raw) {
   return (raw || '').trim().toLowerCase();
@@ -59,7 +61,7 @@ export function AuthProvider({ children }) {
     setProfile(snap.exists() ? { id: snap.id, ...snap.data() } : null);
   }
 
-  async function signup({ email, password, firstName, lastName, username, location = '' }) {
+  async function signup({ email, password, firstName, lastName, username, location = '', bio = '' }) {
     const cleanUsername = normalizeUsername(username);
     if (!USERNAME_RE.test(cleanUsername)) {
       throw new Error('Username must be 3-20 chars, lowercase letters/numbers/underscore.');
@@ -91,6 +93,7 @@ export function AuthProvider({ children }) {
         displayNameLower: displayName.toLowerCase(),
         email,
         location: (location || '').trim(),
+        bio: (bio || '').trim().slice(0, BIO_MAX),
         photoURL: '',
         circleIds: [],
         friendIds: [],
@@ -118,7 +121,7 @@ export function AuthProvider({ children }) {
   // Patch any combination of firstName, lastName, username, location.
   // Username changes are atomic: the old reservation is deleted and the new
   // one created in a single transaction so two users can't collide.
-  async function updateUserProfile({ firstName, lastName, username, location }) {
+  async function updateUserProfile({ firstName, lastName, username, location, bio }) {
     if (!auth.currentUser) throw new Error('Not signed in');
     const uid = auth.currentUser.uid;
     const userRef = doc(db, 'users', uid);
@@ -139,6 +142,9 @@ export function AuthProvider({ children }) {
     }
     if (typeof location === 'string') {
       updates.location = location.trim();
+    }
+    if (typeof bio === 'string') {
+      updates.bio = bio.trim().slice(0, BIO_MAX);
     }
 
     let newUsernameLower = null;
