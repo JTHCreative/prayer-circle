@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   arrayRemove,
   arrayUnion,
@@ -23,6 +23,11 @@ function friendshipId(a, b) {
   return [a, b].sort().join('_');
 }
 
+// The interactive window draws a lattice of profile circles at fixed columns
+// so the horizontal + vertical connectors line up regardless of friend count.
+const GRID_COLS = 6;
+const GRID_MIN_ROWS = 4;
+
 export default function Friends() {
   const { user, profile, refreshProfile } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
@@ -39,12 +44,13 @@ export default function Friends() {
 
   async function loadFriendshipData() {
     if (!user) return;
-    // Load current friend profiles
     if (profile?.friendIds?.length) {
       const parts = chunk(profile.friendIds, 10);
       const all = [];
       for (const p of parts) {
-        const snap = await getDocs(query(collection(db, 'users'), where(documentId(), 'in', p)));
+        const snap = await getDocs(
+          query(collection(db, 'users'), where(documentId(), 'in', p))
+        );
         snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
       }
       setFriends(all);
@@ -52,7 +58,6 @@ export default function Friends() {
       setFriends([]);
     }
 
-    // Load pending friendships involving me.
     const snap = await getDocs(
       query(collection(db, 'friendships'), where('users', 'array-contains', user.uid))
     );
@@ -61,15 +66,14 @@ export default function Friends() {
     for (const d of snap.docs) {
       const data = d.data();
       if (data.status !== 'pending') continue;
-      if (data.requestedBy === user.uid) {
-        const other = data.users.find((u) => u !== user.uid);
-        const userSnap = await getDoc(doc(db, 'users', other));
-        out.push({ id: d.id, other: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null });
-      } else {
-        const other = data.users.find((u) => u !== user.uid);
-        const userSnap = await getDoc(doc(db, 'users', other));
-        inc.push({ id: d.id, other: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null });
-      }
+      const other = data.users.find((u) => u !== user.uid);
+      const userSnap = await getDoc(doc(db, 'users', other));
+      const entry = {
+        id: d.id,
+        other: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null
+      };
+      if (data.requestedBy === user.uid) out.push(entry);
+      else inc.push(entry);
     }
     setIncoming(inc);
     setOutgoing(out);
@@ -138,60 +142,154 @@ export default function Friends() {
     loadFriendshipData();
   }
 
+  function resetSearch() {
+    setSearchTerm('');
+    setSearchResults([]);
+    setStatus('');
+  }
+
+  // Lay friends out on a fixed column grid, padding with empty slots so the
+  // lattice always looks full even when the user only has a handful of friends.
+  const { cells, rows } = useMemo(() => {
+    const rowCount = Math.max(
+      GRID_MIN_ROWS,
+      Math.ceil(friends.length / GRID_COLS) || GRID_MIN_ROWS
+    );
+    const total = rowCount * GRID_COLS;
+    const list = Array.from({ length: total }, (_, i) => friends[i] || null);
+    return { cells: list, rows: rowCount };
+  }, [friends]);
+
   return (
-    <div className="stack">
-      <div className="card">
-        <h2>Find friends</h2>
-        <form onSubmit={handleSearch} className="inline-form">
-          <input
-            placeholder="Search by display name"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-          <button type="submit">Search</button>
-        </form>
-        {status && <p className="muted">{status}</p>}
-        {searchResults.length > 0 && (
-          <ul className="list">
-            {searchResults.map((u) => {
-              const isFriend = profile?.friendIds?.includes(u.id);
-              const pending =
-                outgoing.some((o) => o.other?.id === u.id) ||
-                incoming.some((i) => i.other?.id === u.id);
-              return (
-                <li key={u.id} className="list-row">
-                  <span className="person">
-                    <Avatar user={u} size={32} />
-                    <span>
-                      {u.displayName}
-                      {u.username && <small className="muted"> · @{u.username}</small>}
-                      {u.location && <small className="muted"> · 📍 {u.location}</small>}
+    <div className="circle-universe">
+      <div className="circle-universe-header">
+        <div>
+          <h1>Friends</h1>
+          <p className="muted">
+            Your connected network of prayer companions. Hover a circle to
+            see a profile, or search to find someone new.
+          </p>
+        </div>
+      </div>
+
+      <div className="friends-network">
+        <div className="friends-network-search-wrap">
+          <form onSubmit={handleSearch} className="friends-network-search">
+            <input
+              placeholder="Search people by name"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                if (!e.target.value.trim()) {
+                  setSearchResults([]);
+                  setStatus('');
+                }
+              }}
+            />
+            <button type="submit">Search</button>
+            {(searchResults.length > 0 || status) && (
+              <button
+                type="button"
+                className="friends-network-search-clear"
+                onClick={resetSearch}
+                aria-label="Clear search"
+              >
+                ×
+              </button>
+            )}
+          </form>
+          {status && (
+            <p className="muted friends-network-search-status">{status}</p>
+          )}
+          {searchResults.length > 0 && (
+            <div className="friends-network-search-results" role="listbox">
+              {searchResults.map((u) => {
+                const isFriend = profile?.friendIds?.includes(u.id);
+                const pending =
+                  outgoing.some((o) => o.other?.id === u.id) ||
+                  incoming.some((i) => i.other?.id === u.id);
+                return (
+                  <div key={u.id} className="friends-network-search-row">
+                    <span className="person">
+                      <Avatar user={u} size={32} />
+                      <span>
+                        {u.displayName}
+                        {u.username && (
+                          <small className="muted"> · @{u.username}</small>
+                        )}
+                        {u.location && (
+                          <small className="muted"> · 📍 {u.location}</small>
+                        )}
+                      </span>
                     </span>
-                  </span>
-                  {isFriend ? (
-                    <span className="pill">Friends</span>
-                  ) : pending ? (
-                    <span className="pill">Pending</span>
-                  ) : (
-                    <button onClick={() => sendRequest(u)}>Add</button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+                    {isFriend ? (
+                      <span className="pill">Friends</span>
+                    ) : pending ? (
+                      <span className="pill">Pending</span>
+                    ) : (
+                      <button type="button" onClick={() => sendRequest(u)}>
+                        Add
+                      </button>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div
+          className="friends-network-grid"
+          style={{ '--cols': GRID_COLS, '--rows': rows }}
+        >
+          {cells.map((u, i) => {
+            const col = i % GRID_COLS;
+            const row = Math.floor(i / GRID_COLS);
+            const classes = ['friends-network-cell'];
+            if (col === GRID_COLS - 1) classes.push('is-last-col');
+            if (row === rows - 1) classes.push('is-last-row');
+            if (row === 0) classes.push('is-first-row');
+            return (
+              <div key={i} className={classes.join(' ')}>
+                {u ? (
+                  <FriendNode user={u} onRemove={() => removeFriend(u.id)} />
+                ) : (
+                  <div
+                    className="friends-network-circle friends-network-circle-empty"
+                    aria-hidden="true"
+                  />
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {incoming.length > 0 && (
-        <div className="card">
-          <h2>Incoming requests</h2>
+        <div className="circle-detail-panel">
+          <div className="circle-detail-header">
+            <div>
+              <h2>Incoming requests</h2>
+              <p className="muted">People who'd like to pray alongside you.</p>
+            </div>
+          </div>
           <ul className="list">
             {incoming.map((r) => (
               <li key={r.id} className="list-row">
-                <span>{r.other?.displayName || 'Unknown user'}</span>
+                <span className="person">
+                  {r.other && <Avatar user={r.other} size={32} />}
+                  <span>{r.other?.displayName || 'Unknown user'}</span>
+                </span>
                 <span>
-                  <button onClick={() => acceptRequest(r.id, r.other.id)}>Accept</button>{' '}
-                  <button className="danger" onClick={() => declineOrCancel(r.id)}>Decline</button>
+                  <button onClick={() => acceptRequest(r.id, r.other.id)}>
+                    Accept
+                  </button>{' '}
+                  <button
+                    className="danger"
+                    onClick={() => declineOrCancel(r.id)}
+                  >
+                    Decline
+                  </button>
                 </span>
               </li>
             ))}
@@ -200,47 +298,59 @@ export default function Friends() {
       )}
 
       {outgoing.length > 0 && (
-        <div className="card">
-          <h2>Sent requests</h2>
+        <div className="circle-detail-panel">
+          <div className="circle-detail-header">
+            <div>
+              <h2>Sent requests</h2>
+              <p className="muted">Waiting for a response.</p>
+            </div>
+          </div>
           <ul className="list">
             {outgoing.map((r) => (
               <li key={r.id} className="list-row">
-                <span>{r.other?.displayName || 'Unknown user'}</span>
+                <span className="person">
+                  {r.other && <Avatar user={r.other} size={32} />}
+                  <span>{r.other?.displayName || 'Unknown user'}</span>
+                </span>
                 <button onClick={() => declineOrCancel(r.id)}>Cancel</button>
               </li>
             ))}
           </ul>
         </div>
       )}
+    </div>
+  );
+}
 
-      <div className="card">
-        <h2>Your friends</h2>
-        {friends.length === 0 && (
-          <p className="muted">You haven't added any friends yet. Search above to find people you know.</p>
-        )}
-        <div className="friends-grid">
-          {friends.map((f) => (
-            <div key={f.id} className="friends-grid-item">
-              <button
-                type="button"
-                className="friends-grid-avatar"
-                title={f.displayName}
-                aria-label={`Remove ${f.displayName}`}
-                onClick={() => removeFriend(f.id)}
-              >
-                <Avatar user={f} size={72} />
-                <span className="friends-grid-remove" aria-hidden="true">×</span>
-              </button>
-              <span className="friends-grid-name">{f.displayName}</span>
-              {f.username && <span className="friends-grid-handle">@{f.username}</span>}
-            </div>
-          ))}
-          {Array.from({ length: Math.max(0, 8 - friends.length) }).map((_, i) => (
-            <div key={`empty-${i}`} className="friends-grid-item friends-grid-item-empty" aria-hidden="true">
-              <div className="friends-grid-avatar friends-grid-avatar-empty" />
-            </div>
-          ))}
+function FriendNode({ user, onRemove }) {
+  const name =
+    user.displayName ||
+    [user.firstName, user.lastName].filter(Boolean).join(' ');
+  const bio = user.bio || user.description || '';
+  return (
+    <div className="friends-network-node" tabIndex={0}>
+      <div className="friends-network-circle">
+        <Avatar user={user} size={56} />
+      </div>
+      <div className="friends-network-card" role="tooltip">
+        <div className="friends-network-card-head">
+          <Avatar user={user} size={56} />
+          <div className="friends-network-card-id">
+            {name && <strong>{name}</strong>}
+            {user.username && <span className="muted">@{user.username}</span>}
+          </div>
         </div>
+        {bio && <p className="friends-network-card-bio">{bio}</p>}
+        {user.location && (
+          <p className="friends-network-card-meta">📍 {user.location}</p>
+        )}
+        <button
+          type="button"
+          className="danger friends-network-card-remove"
+          onClick={onRemove}
+        >
+          Remove friend
+        </button>
       </div>
     </div>
   );
