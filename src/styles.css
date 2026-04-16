@@ -1487,29 +1487,57 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 
 /* ---------- Friends network ---------------------------------------- */
-/* Matches the .circle-space look: soft radial glow, subtle border, inset
-   shadow. Profile circles sit on a lattice of connecting lines drawn by
-   each cell's ::before (right) + ::after (below) pseudo-elements. */
+/* Mirrors .circle-space: same size, same soft radial glow. The lattice
+   is drawn as a repeating line pattern on an absolutely-positioned layer
+   that extends the full container, then masked with a radial fade so the
+   grid appears to drift out into infinity rather than stopping at a
+   hard border. */
 .friends-network {
+  --cell: 112px;
   position: relative;
   flex: 1;
-  min-height: 540px;
+  min-height: 520px;
   border-radius: 18px;
+  overflow: hidden;
   border: 1px solid var(--border);
   background:
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
     linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
   box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
-  padding: 96px 28px 32px;
 }
 
+.friends-network-lines {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  background-image:
+    linear-gradient(to right, rgba(99, 102, 241, 0.32) 0 2px, transparent 2px),
+    linear-gradient(to bottom, rgba(99, 102, 241, 0.32) 0 2px, transparent 2px);
+  background-size: var(--cell) var(--cell);
+  background-position: 50% 50%;
+  -webkit-mask-image: radial-gradient(
+    ellipse 65% 70% at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+  mask-image: radial-gradient(
+    ellipse 65% 70% at center,
+    #000 0%,
+    rgba(0, 0, 0, 0.55) 55%,
+    transparent 100%
+  );
+}
+
+/* Floating search pill — centered along the top of the window. */
 .friends-network-search-wrap {
   position: absolute;
-  top: 20px;
+  top: 18px;
   left: 50%;
   transform: translateX(-50%);
-  width: min(520px, calc(100% - 40px));
+  width: min(480px, calc(100% - 220px));
   z-index: 5;
 }
 .friends-network-search {
@@ -1582,57 +1610,112 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   font-size: 12px;
 }
 
-/* The lattice itself. CSS grid with fixed columns so the ::before /
-   ::after connector lines align cleanly between neighbours. */
-.friends-network-grid {
+/* Requests button + expandable panel in the top-right corner. */
+.friends-network-requests {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+}
+.friends-network-requests-btn {
   position: relative;
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 999px;
+}
+.friends-network-requests-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(220, 38, 38, 0.35);
+}
+.friends-network-requests-panel {
+  width: 300px;
+  max-height: 360px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 14px 34px rgba(15, 23, 42, 0.18);
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: overlay-pop-in 180ms ease-out;
+}
+.friends-network-requests-panel .muted { text-align: center; padding: 6px; }
+.friends-request-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--primary-soft);
+}
+.friends-request-card-id {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.friends-request-card-id strong {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friends-request-card-id .muted { font-size: 11px; }
+.friends-request-card-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.friends-request-card-actions button {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+/* The circle lattice — centered in the container, fixed cell size so
+   circles land exactly on the grid-line intersections drawn by
+   .friends-network-lines. */
+.friends-network-grid {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
   display: grid;
-  grid-template-columns: repeat(var(--cols), 1fr);
-  grid-auto-rows: minmax(96px, 1fr);
-  height: 100%;
-  min-height: 380px;
-  place-items: center;
-  z-index: 1;
+  grid-template-columns: repeat(var(--cols), var(--cell));
+  grid-auto-rows: var(--cell);
+  z-index: 2;
 }
 .friends-network-cell {
   position: relative;
-  width: 100%;
-  height: 100%;
+  width: var(--cell);
+  height: var(--cell);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-/* Horizontal connector to the next cell on the right. */
-.friends-network-cell::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 100%;
-  height: 2px;
-  background: rgba(99, 102, 241, 0.22);
-  transform: translateY(-50%);
-  z-index: 0;
-}
-/* Vertical connector down to the next cell below. */
-.friends-network-cell::after {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 2px;
-  height: 100%;
-  background: rgba(99, 102, 241, 0.22);
-  transform: translateX(-50%);
-  z-index: 0;
-}
-.friends-network-cell.is-last-col::before { display: none; }
-.friends-network-cell.is-last-row::after { display: none; }
 
 .friends-network-circle {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: 64px;
+  height: 64px;
   border-radius: 999px;
   display: flex;
   align-items: center;
@@ -1640,18 +1723,31 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   background: var(--card);
   box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
   z-index: 1;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: transform 0.18s ease, box-shadow 0.18s ease,
+    background 0.18s ease, border-color 0.18s ease;
 }
-.friends-network-circle .avatar {
-  width: 56px;
-  height: 56px;
-  font-size: 26px;
-}
+/* Darker, obviously-clickable empty slot with a soft + glyph. Uses a
+   button element so keyboard users can activate it. */
 .friends-network-circle-empty {
-  background: rgba(255, 255, 255, 0.55);
-  border: 2px dashed var(--border);
-  box-shadow: none;
-  opacity: 0.85;
+  background: rgba(99, 102, 241, 0.08);
+  border: 2px solid rgba(99, 102, 241, 0.35);
+  color: rgba(79, 70, 229, 0.55);
+  padding: 0;
+  cursor: pointer;
+  box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.friends-network-circle-empty:hover,
+.friends-network-circle-empty:focus-visible {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: rgba(79, 70, 229, 0.7);
+  color: rgba(79, 70, 229, 0.9);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 14px rgba(79, 70, 229, 0.22);
+}
+.friends-network-circle-empty svg {
+  width: 22px;
+  height: 22px;
+  display: block;
 }
 
 /* Node wraps the circle + hover card and owns the focus/hover state. */
@@ -1752,7 +1848,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 
 /* Top row: flip card below the circle so it doesn't collide with the
-   search bar overlay. */
+   search / requests overlays. */
 .friends-network-cell.is-first-row .friends-network-card {
   bottom: auto;
   top: calc(100% + 12px);
@@ -1767,6 +1863,20 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .friends-network-cell.is-first-row .friends-network-node:hover .friends-network-card,
 .friends-network-cell.is-first-row .friends-network-node:focus-visible .friends-network-card {
   transform: translateX(-50%) translateY(0);
+}
+
+/* Red alert dot on the Friends nav link when incoming requests are pending. */
+.nav-btn-wrap { position: relative; display: inline-flex; }
+.nav-alert-dot {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: #dc2626;
+  box-shadow: 0 0 0 2px #fff, 0 2px 4px rgba(220, 38, 38, 0.45);
+  pointer-events: none;
 }
 
 /* Notifications bell + dropdown */

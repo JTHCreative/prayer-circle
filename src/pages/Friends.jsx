@@ -23,8 +23,13 @@ function friendshipId(a, b) {
   return [a, b].sort().join('_');
 }
 
-// The interactive window draws a lattice of profile circles at fixed columns
-// so the horizontal + vertical connectors line up regardless of friend count.
+// Notifications written to the target user's subcollection use a stable id
+// per sender so a second request doesn't create a duplicate entry.
+function friendRequestNotifId(fromUid) {
+  return `friend_request_${fromUid}`;
+}
+
+// The interactive window draws a lattice of profile circles at fixed columns.
 const GRID_COLS = 6;
 const GRID_MIN_ROWS = 4;
 
@@ -36,6 +41,8 @@ export default function Friends() {
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
   const [status, setStatus] = useState('');
+  const [addOpen, setAddOpen] = useState(false);
+  const [requestsOpen, setRequestsOpen] = useState(false);
 
   useEffect(() => {
     loadFriendshipData();
@@ -105,8 +112,7 @@ export default function Friends() {
     const ref = doc(db, 'friendships', id);
     const existing = await getDoc(ref);
     if (existing.exists()) {
-      setStatus('A friendship or request already exists with this user.');
-      return;
+      throw new Error('A friendship or request already exists with this user.');
     }
     await setDoc(ref, {
       users: [user.uid, otherUser.id],
@@ -114,8 +120,50 @@ export default function Friends() {
       status: 'pending',
       createdAt: serverTimestamp()
     });
-    setStatus(`Friend request sent to ${otherUser.displayName}.`);
+    await setDoc(
+      doc(
+        db,
+        'users',
+        otherUser.id,
+        'notifications',
+        friendRequestNotifId(user.uid)
+      ),
+      {
+        type: 'friend_request',
+        title: 'Friend request',
+        body: `${profile?.displayName || 'Someone'} wants to connect with you.`,
+        fromUserId: user.uid,
+        fromUsername: profile?.username || '',
+        fromName: profile?.displayName || '',
+        read: false,
+        createdAt: serverTimestamp()
+      }
+    );
     loadFriendshipData();
+  }
+
+  async function sendRequestFromSearch(otherUser) {
+    try {
+      await sendRequest(otherUser);
+      setStatus(`Friend request sent to ${otherUser.displayName}.`);
+    } catch (err) {
+      setStatus(err.message);
+    }
+  }
+
+  async function sendRequestByUsername(rawUsername) {
+    const cleanUsername = (rawUsername || '').trim().toLowerCase();
+    if (!cleanUsername) throw new Error('Enter a username.');
+    const unameSnap = await getDoc(doc(db, 'usernames', cleanUsername));
+    if (!unameSnap.exists()) throw new Error('No user with that username.');
+    const otherId = unameSnap.data().uid;
+    if (otherId === user.uid) throw new Error("You can't friend yourself.");
+    if (profile?.friendIds?.includes(otherId)) {
+      throw new Error('You are already friends.');
+    }
+    const userSnap = await getDoc(doc(db, 'users', otherId));
+    if (!userSnap.exists()) throw new Error('User not found.');
+    await sendRequest({ id: otherId, ...userSnap.data() });
   }
 
   async function acceptRequest(friendshipDocId, otherId) {
@@ -123,13 +171,29 @@ export default function Friends() {
     await updateDoc(ref, { status: 'accepted', acceptedAt: serverTimestamp() });
     await updateDoc(doc(db, 'users', user.uid), { friendIds: arrayUnion(otherId) });
     await updateDoc(doc(db, 'users', otherId), { friendIds: arrayUnion(user.uid) });
+    await clearFriendRequestNotif(otherId);
     await refreshProfile();
     loadFriendshipData();
   }
 
-  async function declineOrCancel(friendshipDocId) {
+  async function declineOrCancel(friendshipDocId, otherId) {
     await deleteDoc(doc(db, 'friendships', friendshipDocId));
+    // Remove the notification so the target's bell/badge clears too.
+    if (otherId) await clearFriendRequestNotif(otherId);
     loadFriendshipData();
+  }
+
+  async function clearFriendRequestNotif(otherId) {
+    // I'm the recipient: notification lives under my own user doc, keyed
+    // by the sender's uid. When I'm the sender and the recipient cancels,
+    // we don't touch their notifications here.
+    try {
+      await deleteDoc(
+        doc(db, 'users', user.uid, 'notifications', friendRequestNotifId(otherId))
+      );
+    } catch {
+      /* ignore — notification may have already been dismissed */
+    }
   }
 
   async function removeFriend(otherId) {
@@ -148,8 +212,6 @@ export default function Friends() {
     setStatus('');
   }
 
-  // Lay friends out on a fixed column grid, padding with empty slots so the
-  // lattice always looks full even when the user only has a handful of friends.
   const { cells, rows } = useMemo(() => {
     const rowCount = Math.max(
       GRID_MIN_ROWS,
@@ -167,12 +229,14 @@ export default function Friends() {
           <h1>Friends</h1>
           <p className="muted">
             Your connected network of prayer companions. Hover a circle to
-            see a profile, or search to find someone new.
+            see a profile, or tap an empty slot to invite someone new.
           </p>
         </div>
       </div>
 
       <div className="friends-network">
+        <div className="friends-network-lines" aria-hidden="true" />
+
         <div className="friends-network-search-wrap">
           <form onSubmit={handleSearch} className="friends-network-search">
             <input
@@ -227,7 +291,10 @@ export default function Friends() {
                     ) : pending ? (
                       <span className="pill">Pending</span>
                     ) : (
-                      <button type="button" onClick={() => sendRequest(u)}>
+                      <button
+                        type="button"
+                        onClick={() => sendRequestFromSearch(u)}
+                      >
                         Add
                       </button>
                     )}
@@ -238,64 +305,86 @@ export default function Friends() {
           )}
         </div>
 
+        <div className="friends-network-requests">
+          <button
+            type="button"
+            className="friends-network-requests-btn"
+            onClick={() => setRequestsOpen((o) => !o)}
+            aria-expanded={requestsOpen}
+          >
+            Requests
+            {incoming.length > 0 && (
+              <span className="friends-network-requests-badge">
+                {incoming.length}
+              </span>
+            )}
+          </button>
+          {requestsOpen && (
+            <div className="friends-network-requests-panel">
+              {incoming.length === 0 ? (
+                <p className="muted">No incoming requests.</p>
+              ) : (
+                incoming.map((r) => (
+                  <div key={r.id} className="friends-request-card">
+                    <Avatar user={r.other} size={44} />
+                    <div className="friends-request-card-id">
+                      <strong>
+                        {r.other?.firstName} {r.other?.lastName}
+                      </strong>
+                      {r.other?.username && (
+                        <span className="muted">@{r.other.username}</span>
+                      )}
+                    </div>
+                    <div className="friends-request-card-actions">
+                      <button
+                        type="button"
+                        onClick={() => acceptRequest(r.id, r.other.id)}
+                      >
+                        Accept
+                      </button>
+                      <button
+                        type="button"
+                        className="danger"
+                        onClick={() => declineOrCancel(r.id, r.other?.id)}
+                      >
+                        Decline
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </div>
+
         <div
           className="friends-network-grid"
           style={{ '--cols': GRID_COLS, '--rows': rows }}
         >
           {cells.map((u, i) => {
-            const col = i % GRID_COLS;
             const row = Math.floor(i / GRID_COLS);
             const classes = ['friends-network-cell'];
-            if (col === GRID_COLS - 1) classes.push('is-last-col');
-            if (row === rows - 1) classes.push('is-last-row');
             if (row === 0) classes.push('is-first-row');
             return (
               <div key={i} className={classes.join(' ')}>
                 {u ? (
                   <FriendNode user={u} onRemove={() => removeFriend(u.id)} />
                 ) : (
-                  <div
+                  <button
+                    type="button"
                     className="friends-network-circle friends-network-circle-empty"
-                    aria-hidden="true"
-                  />
+                    onClick={() => setAddOpen(true)}
+                    aria-label="Add a friend"
+                    title="Add a friend"
+                  >
+                    <PlusIcon />
+                  </button>
                 )}
               </div>
             );
           })}
         </div>
       </div>
-
-      {incoming.length > 0 && (
-        <div className="circle-detail-panel">
-          <div className="circle-detail-header">
-            <div>
-              <h2>Incoming requests</h2>
-              <p className="muted">People who'd like to pray alongside you.</p>
-            </div>
-          </div>
-          <ul className="list">
-            {incoming.map((r) => (
-              <li key={r.id} className="list-row">
-                <span className="person">
-                  {r.other && <Avatar user={r.other} size={32} />}
-                  <span>{r.other?.displayName || 'Unknown user'}</span>
-                </span>
-                <span>
-                  <button onClick={() => acceptRequest(r.id, r.other.id)}>
-                    Accept
-                  </button>{' '}
-                  <button
-                    className="danger"
-                    onClick={() => declineOrCancel(r.id)}
-                  >
-                    Decline
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
 
       {outgoing.length > 0 && (
         <div className="circle-detail-panel">
@@ -312,11 +401,20 @@ export default function Friends() {
                   {r.other && <Avatar user={r.other} size={32} />}
                   <span>{r.other?.displayName || 'Unknown user'}</span>
                 </span>
-                <button onClick={() => declineOrCancel(r.id)}>Cancel</button>
+                <button onClick={() => declineOrCancel(r.id, r.other?.id)}>
+                  Cancel
+                </button>
               </li>
             ))}
           </ul>
         </div>
+      )}
+
+      {addOpen && (
+        <AddFriendModal
+          onClose={() => setAddOpen(false)}
+          onSend={sendRequestByUsername}
+        />
       )}
     </div>
   );
@@ -353,6 +451,83 @@ function FriendNode({ user, onRemove }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function AddFriendModal({ onClose, onSend }) {
+  const [username, setUsername] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e) {
+    e.preventDefault();
+    setError('');
+    setSuccess('');
+    setBusy(true);
+    try {
+      await onSend(username);
+      setSuccess(`Friend request sent to @${username.trim().toLowerCase()}.`);
+      setUsername('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div className="overlay-card" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="overlay-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <h2>Add a friend</h2>
+        <p className="muted">Send a friend request by their username.</p>
+        <form onSubmit={submit}>
+          <label>
+            Username
+            <input
+              value={username}
+              onChange={(e) => setUsername(e.target.value.toLowerCase())}
+              pattern="[a-z0-9_]{3,20}"
+              title="3-20 characters: lowercase letters, numbers, underscores"
+              placeholder="e.g. prayerful_soul"
+              required
+              autoFocus
+            />
+          </label>
+          {error && <p className="error">{error}</p>}
+          {success && <p className="muted">{success}</p>}
+          <div className="button-row">
+            <button type="button" onClick={onClose}>
+              Close
+            </button>
+            <button type="submit" disabled={busy}>
+              {busy ? 'Sending…' : 'Send request'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 5v14M5 12h14"
+        stroke="currentColor"
+        strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 
