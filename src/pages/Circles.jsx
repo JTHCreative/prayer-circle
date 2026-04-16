@@ -626,6 +626,7 @@ export default function Circles() {
           prayers={panelPrayers}
           loading={panelLoading}
           onClose={() => setSelected(null)}
+          onPrayerCreated={(prayer) => setPanelPrayers((prev) => [prayer, ...prev])}
         />
       )}
 
@@ -887,7 +888,7 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
   );
 }
 
-function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
+function CircleDetailPanel({ circle, members, prayers, loading, onClose, onPrayerCreated }) {
   const trackRef = useRef(null);
   const panelRef = useRef(null);
   const owner = members.find((m) => m.id === circle.createdBy);
@@ -938,15 +939,7 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
       <section className="circle-detail-section">
         <h3>Owner</h3>
         {owner ? (
-          <div className="circle-detail-owner">
-            <Avatar user={owner} size={48} />
-            <span className="circle-detail-owner-name">
-              <strong>{owner.displayName || 'Unknown'}</strong>
-              {owner.username && (
-                <small className="muted">@{owner.username}</small>
-              )}
-            </span>
-          </div>
+          <MemberCircle user={owner} size={64} />
         ) : loading ? (
           <p className="muted">Loading…</p>
         ) : (
@@ -962,12 +955,7 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
         {otherMembers.length > 0 && (
           <div className="circle-members-grid">
             {otherMembers.map((m) => (
-              <div key={m.id} className="circle-member-item">
-                <Avatar user={m} size={56} />
-                <span className="circle-member-name">
-                  {m.displayName || m.username || '—'}
-                </span>
-              </div>
+              <MemberCircle key={m.id} user={m} size={56} />
             ))}
           </div>
         )}
@@ -978,7 +966,11 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
         {loading && prayers.length === 0 ? (
           <p className="muted">Loading prayers…</p>
         ) : prayers.length === 0 ? (
-          <p className="muted">No prayers shared with this circle yet.</p>
+          <div className="prayer-swipe">
+            <div className="prayer-swipe-track">
+              <NewPrayerCard circle={circle} onCreated={onPrayerCreated} />
+            </div>
+          </div>
         ) : (
           <div className="prayer-swipe">
             {prayers.length > 1 && (
@@ -1038,5 +1030,90 @@ function CircleDetailPanel({ circle, members, prayers, loading, onClose }) {
         )}
       </section>
     </div>
+  );
+}
+
+// Profile circle that reveals the user's display name + handle on hover.
+function MemberCircle({ user, size }) {
+  const handle = user?.username ? `@${user.username}` : '';
+  const name = user?.displayName || user?.username || '—';
+  return (
+    <div className="member-circle" tabIndex={0} aria-label={handle ? `${name} ${handle}` : name}>
+      <Avatar user={user} size={size} />
+      <div className="member-circle-tooltip" role="tooltip">
+        <strong>{name}</strong>
+        {handle && <span>{handle}</span>}
+      </div>
+    </div>
+  );
+}
+
+function NewPrayerCard({ circle, onCreated }) {
+  const { user, profile } = useAuth();
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed || busy) return;
+    setBusy(true);
+    setError('');
+    try {
+      const ref = await addDoc(collection(db, 'prayers'), {
+        text: trimmed,
+        authorId: user.uid,
+        authorName: profile?.displayName ?? 'Anonymous',
+        authorLocation: profile?.location ?? '',
+        authorPhotoURL: profile?.photoURL ?? '',
+        authorUsername: profile?.username ?? '',
+        visibility: 'circles',
+        targetUserId: null,
+        targetUsername: '',
+        targetName: '',
+        circleIds: [circle.id],
+        circleNames: [circle.name].filter(Boolean),
+        prayedBy: [],
+        prayedCount: 0,
+        createdAt: serverTimestamp()
+      });
+      // Optimistically surface the new prayer in the swipe track. The
+      // server will eventually fill in the real createdAt timestamp.
+      onCreated({
+        id: ref.id,
+        text: trimmed,
+        authorId: user.uid,
+        authorName: profile?.displayName ?? '',
+        authorPhotoURL: profile?.photoURL ?? '',
+        authorUsername: profile?.username ?? '',
+        circleIds: [circle.id],
+        createdAt: { toDate: () => new Date() }
+      });
+      setText('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <form className="prayer-swipe-card prayer-swipe-card-new" onSubmit={handleSubmit}>
+      <h4>Share the first prayer</h4>
+      <p className="muted">
+        Be the first to ask {circle.name} for prayer.
+      </p>
+      <textarea
+        rows={4}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        placeholder="What's on your heart?"
+      />
+      {error && <p className="error">{error}</p>}
+      <button type="submit" disabled={busy || !text.trim()}>
+        {busy ? 'Posting…' : 'Post prayer'}
+      </button>
+    </form>
   );
 }

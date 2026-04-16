@@ -624,39 +624,58 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   text-transform: uppercase;
   color: var(--muted);
 }
-.circle-detail-owner {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 8px 14px 8px 8px;
-  border-radius: 999px;
-  background: var(--primary-soft);
-  border: 1px solid var(--border);
-  align-self: flex-start;
-}
-.circle-detail-owner-name { display: flex; flex-direction: column; line-height: 1.2; }
-
 .circle-members-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
   gap: 14px 10px;
 }
-.circle-member-item {
+.member-circle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  outline: none;
+  transition: transform 0.15s ease;
+}
+.member-circle:hover,
+.member-circle:focus-visible { transform: translateY(-2px); }
+.member-circle-tooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  min-width: 0;
-}
-.circle-member-name {
+  gap: 2px;
+  padding: 6px 10px;
+  background: rgba(15, 23, 42, 0.94);
+  color: #fff;
+  border-radius: 8px;
   font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  text-align: center;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
   white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  z-index: 5;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+.member-circle-tooltip span { color: rgba(255, 255, 255, 0.78); }
+.member-circle-tooltip::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: rgba(15, 23, 42, 0.94);
+}
+.member-circle:hover .member-circle-tooltip,
+.member-circle:focus-visible .member-circle-tooltip {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 .prayer-swipe { position: relative; }
@@ -691,6 +710,31 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   color: var(--text);
 }
 .prayer-swipe-card-date { font-size: 11px; margin-top: auto; }
+.prayer-swipe-card-new {
+  background:
+    linear-gradient(#ffffff, #ffffff) padding-box,
+    var(--btn-gradient) border-box;
+  border: 1.5px solid transparent;
+}
+.prayer-swipe-card-new h4 { margin: 0; font-size: 15px; }
+.prayer-swipe-card-new p { margin: 0; font-size: 12px; }
+.prayer-swipe-card-new textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 80px;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--primary-soft);
+  color: var(--text);
+}
+.prayer-swipe-card-new button {
+  align-self: flex-start;
+  padding: 6px 14px;
+  font-size: 13px;
+}
 .prayer-swipe-nav {
   position: absolute;
   top: 50%;
