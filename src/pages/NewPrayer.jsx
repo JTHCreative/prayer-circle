@@ -11,7 +11,21 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import Avatar from '../components/Avatar.jsx';
 import { chunk } from '../utils/arrays.js';
+import {
+  CircleVisibilityIcon,
+  PersonIcon,
+  PublicIcon
+} from '../components/icons.jsx';
+import { CircleIcon } from '../components/circleIcons.jsx';
+import { circleBubbleBackground } from '../utils/circleGradients.js';
+
+const VISIBILITY_OPTIONS = [
+  { key: 'public', label: 'Public', Icon: PublicIcon, helper: 'Anyone on Prayer Circle can see this.' },
+  { key: 'circles', label: 'My Circles', Icon: CircleVisibilityIcon, helper: 'Only the prayer circles you pick.' },
+  { key: 'friend', label: 'One Friend', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
+];
 
 export default function NewPrayer() {
   const { user, profile } = useAuth();
@@ -37,32 +51,12 @@ export default function NewPrayer() {
   useEffect(() => {
     async function loadRefs() {
       if (!profile) return;
-      // Load friend profiles
-      if (profile.friendIds && profile.friendIds.length > 0) {
-        const chunks = chunk(profile.friendIds, 10);
-        const all = [];
-        for (const part of chunks) {
-          const q = query(collection(db, 'users'), where(documentId(), 'in', part));
-          const snap = await getDocs(q);
-          snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-        }
-        setFriends(all);
-      } else {
-        setFriends([]);
-      }
-      // Load circles
-      if (profile.circleIds && profile.circleIds.length > 0) {
-        const chunks = chunk(profile.circleIds, 10);
-        const all = [];
-        for (const part of chunks) {
-          const q = query(collection(db, 'circles'), where(documentId(), 'in', part));
-          const snap = await getDocs(q);
-          snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-        }
-        setCircles(all);
-      } else {
-        setCircles([]);
-      }
+      const [friendList, circleList] = await Promise.all([
+        fetchByIds('users', profile.friendIds),
+        fetchByIds('circles', profile.circleIds)
+      ]);
+      setFriends(friendList);
+      setCircles(circleList);
     }
     loadRefs();
   }, [profile]);
@@ -96,7 +90,7 @@ export default function NewPrayer() {
       const selectedCircles = circles.filter((c) => selectedCircleIds.includes(c.id));
       const targetFriend = friends.find((f) => f.id === targetUserId);
 
-      const base = {
+      await addDoc(collection(db, 'prayers'), {
         text: text.trim(),
         authorId: user.uid,
         authorName: profile?.displayName ?? 'Anonymous',
@@ -115,8 +109,7 @@ export default function NewPrayer() {
         prayedBy: [],
         prayedCount: 0,
         createdAt: serverTimestamp()
-      };
-      await addDoc(collection(db, 'prayers'), base);
+      });
       navigate('/');
     } catch (err) {
       setError(err.message);
@@ -125,97 +118,178 @@ export default function NewPrayer() {
     }
   }
 
+  const activeOption = VISIBILITY_OPTIONS.find((o) => o.key === visibility);
+
   return (
-    <div className="card">
-      <h1>Share a prayer request</h1>
-      <form onSubmit={handleSubmit}>
-        <label>
-          What would you like prayer for?
-          <textarea
-            rows={5}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Share your heart…"
-            required
-          />
-        </label>
+    <div className="circle-universe">
+      <div className="circle-universe-header">
+        <div>
+          <h1>New Prayer</h1>
+          <p className="muted">
+            Share what's on your heart, then pick who should see it.
+          </p>
+        </div>
+      </div>
 
-        <fieldset className="visibility">
-          <legend>Who can see this?</legend>
-          <label className="radio">
-            <input
-              type="radio"
-              name="visibility"
-              value="public"
-              checked={visibility === 'public'}
-              onChange={(e) => setVisibility(e.target.value)}
-            />
-            <span>Public — all users</span>
-          </label>
-          <label className="radio">
-            <input
-              type="radio"
-              name="visibility"
-              value="circles"
-              checked={visibility === 'circles'}
-              onChange={(e) => setVisibility(e.target.value)}
-            />
-            <span>My prayer circles</span>
-          </label>
-          <label className="radio">
-            <input
-              type="radio"
-              name="visibility"
-              value="friend"
-              checked={visibility === 'friend'}
-              onChange={(e) => setVisibility(e.target.value)}
-            />
-            <span>One specific friend</span>
-          </label>
-        </fieldset>
-
-        {visibility === 'friend' && (
-          <label>
-            Friend
-            <select
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value)}
-              required
+      <div className="new-prayer-space">
+        <div className="new-prayer-inner">
+          <div className="new-prayer-row">
+            <form
+              className="new-prayer-card new-prayer-main"
+              onSubmit={handleSubmit}
             >
-              <option value="">Select a friend…</option>
-              {friends.map((f) => (
-                <option key={f.id} value={f.id}>{f.displayName}</option>
-              ))}
-            </select>
-            {friends.length === 0 && (
-              <small className="muted">You haven't added any friends yet.</small>
-            )}
-          </label>
-        )}
+              <label className="new-prayer-field">
+                <span className="new-prayer-field-label">
+                  What would you like prayer for?
+                </span>
+                <textarea
+                  rows={7}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                  placeholder="Share your heart…"
+                  required
+                />
+              </label>
+              {error && <p className="error">{error}</p>}
+              <div className="new-prayer-submit">
+                <span className="muted">{activeOption?.helper}</span>
+                <button type="submit" disabled={busy}>
+                  {busy ? 'Posting…' : 'Post prayer'}
+                </button>
+              </div>
+            </form>
 
-        {visibility === 'circles' && (
-          <div>
-            <p className="label">Select circles</p>
-            {circles.length === 0 && <p className="muted">You haven't joined any circles yet.</p>}
-            <div className="checkbox-list">
-              {circles.map((c) => (
-                <label key={c.id} className="checkbox">
-                  <input
-                    type="checkbox"
-                    checked={selectedCircleIds.includes(c.id)}
-                    onChange={() => toggleCircle(c.id)}
-                  />
-                  <span>{c.name}</span>
-                </label>
-              ))}
+            <div className="new-prayer-card new-prayer-visibility">
+              <h3>Who can see this?</h3>
+              <div className="new-prayer-visibility-options">
+                {VISIBILITY_OPTIONS.map(({ key, label, Icon }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    className={
+                      visibility === key
+                        ? 'new-prayer-visibility-btn is-active'
+                        : 'new-prayer-visibility-btn'
+                    }
+                    onClick={() => setVisibility(key)}
+                    aria-pressed={visibility === key}
+                  >
+                    <Icon size={22} />
+                    <span>{label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
-        )}
 
-        {error && <p className="error">{error}</p>}
-        <button type="submit" disabled={busy}>{busy ? 'Posting…' : 'Post prayer'}</button>
-      </form>
+          {visibility === 'circles' && (
+            <div className="new-prayer-card new-prayer-selector">
+              <h3>Select Circles</h3>
+              {circles.length === 0 ? (
+                <p className="muted">
+                  You haven't joined any prayer circles yet.
+                </p>
+              ) : (
+                <div className="new-prayer-circle-grid">
+                  {circles.map((c) => {
+                    const checked = selectedCircleIds.includes(c.id);
+                    const memberCount = (c.members || []).length;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        className={
+                          checked
+                            ? 'new-prayer-bubble is-active'
+                            : 'new-prayer-bubble'
+                        }
+                        onClick={() => toggleCircle(c.id)}
+                        aria-pressed={checked}
+                        title={c.name}
+                      >
+                        <span
+                          className="new-prayer-bubble-fill"
+                          style={{ background: circleBubbleBackground(c) }}
+                        >
+                          {c.iconKey && (
+                            <CircleIcon
+                              name={c.iconKey}
+                              size={26}
+                              className="new-prayer-bubble-icon"
+                            />
+                          )}
+                          <span className="new-prayer-bubble-name">{c.name}</span>
+                          <span className="new-prayer-bubble-count">
+                            {memberCount}
+                          </span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {visibility === 'friend' && (
+            <div className="new-prayer-card new-prayer-selector">
+              <h3>Select a Friend</h3>
+              {friends.length === 0 ? (
+                <p className="muted">You haven't added any friends yet.</p>
+              ) : (
+                <ul className="new-prayer-selector-list">
+                  {friends.map((f) => {
+                    const checked = targetUserId === f.id;
+                    return (
+                      <li key={f.id}>
+                        <button
+                          type="button"
+                          className={
+                            checked
+                              ? 'new-prayer-selector-row is-active'
+                              : 'new-prayer-selector-row'
+                          }
+                          onClick={() => setTargetUserId(f.id)}
+                          aria-pressed={checked}
+                        >
+                          <span className="person">
+                            <Avatar user={f} size={32} />
+                            <span>
+                              <strong>{f.displayName}</strong>
+                              {f.username && (
+                                <small className="muted">
+                                  {' '}· @{f.username}
+                                </small>
+                              )}
+                            </span>
+                          </span>
+                          <span className="new-prayer-check" aria-hidden="true">
+                            {checked ? '✓' : ''}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
 
+// Batch fetch docs for a collection given an array of ids. Mirrors the
+// chunked `documentId() in` pattern used in Friends.jsx.
+async function fetchByIds(collectionName, ids) {
+  if (!ids?.length) return [];
+  const snaps = await Promise.all(
+    chunk(ids, 10).map((part) =>
+      getDocs(query(collection(db, collectionName), where(documentId(), 'in', part)))
+    )
+  );
+  const out = [];
+  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
+  return out;
+}

@@ -35,6 +35,16 @@ export function PublicIcon(props) {
   );
 }
 
+// Single person — used for "friend" visibility (a direct prayer request).
+export function PersonIcon(props) {
+  return (
+    <Svg {...props}>
+      <circle cx="12" cy="8" r="3.75" />
+      <path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6" />
+    </Svg>
+  );
+}
+
 // Two overlapping circles — used for "circle" visibility
 export function CircleVisibilityIcon(props) {
   return (

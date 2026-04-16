@@ -20,8 +20,10 @@ export default function Layout() {
   const navigate = useNavigate();
   const location = useLocation();
   const wide = location.pathname === '/';
-  const circlesPage = location.pathname === '/circles';
-  const friendsPage = location.pathname === '/friends';
+  const interactiveWindowPage =
+    location.pathname === '/circles' ||
+    location.pathname === '/friends' ||
+    location.pathname === '/new';
   const [pendingRequests, setPendingRequests] = useState(0);
 
   // Counts pending requests I didn't initiate — drives the nav alert dot.
@@ -100,7 +102,7 @@ export default function Layout() {
         className={
           wide
             ? 'container container-home'
-            : circlesPage || friendsPage
+            : interactiveWindowPage
             ? 'container container-wide'
             : 'container'
         }
