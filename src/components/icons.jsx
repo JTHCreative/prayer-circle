@@ -88,14 +88,23 @@ export function BookIcon(props) {
   );
 }
 
-// Praying hands abstracted as two teardrop shapes meeting at the top,
-// with a knuckle line — a modern flat take on the classic prayer icon.
-export function PrayIcon(props) {
+// Praying hands silhouette in solid currentColor — two mirrored teardrop
+// shapes that meet along a 1px gap to read as palms pressed together.
+export function PrayIcon({ size = 18, label, className }) {
   return (
-    <Svg {...props} strokeWidth="1.7">
-      <path d="M11 21c-2.5 0-4.5-2-4.5-4.5V10.5c0-3 2-7.5 3-7.5s1.2 1 1.2 3V13" />
-      <path d="M13 21c2.5 0 4.5-2 4.5-4.5V10.5c0-3-2-7.5-3-7.5s-1.2 1-1.2 3V13" />
-      <path d="M7 13.5h10" />
-    </Svg>
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      stroke="none"
+      aria-hidden={label ? undefined : true}
+      aria-label={label}
+      role={label ? 'img' : 'presentation'}
+    >
+      <path d="M11.5 2.5C9.3 2.5 5.5 6.5 5.5 11v5c0 3.3 2.2 5.5 5.5 5.5h.5z" />
+      <path d="M12.5 2.5c2.2 0 6 4 6 8.5v5c0 3.3-2.2 5.5-5.5 5.5h-.5z" />
+    </svg>
   );
 }
