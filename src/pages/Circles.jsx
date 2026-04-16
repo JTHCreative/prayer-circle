@@ -479,6 +479,9 @@ export default function Circles() {
     );
     try {
       await togglePraying(user, prayer);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to toggle praying', err);
     } finally {
       togglingRef.current.delete(prayer.id);
     }
@@ -1357,14 +1360,24 @@ function NewPrayerCard({ circle, hasExistingPrayers, onCreated }) {
       });
       // Optimistically surface the new prayer in the swipe track. The
       // server will eventually fill in the real createdAt timestamp.
+      // Mirror every field togglePraying's snapshot reads so praying for
+      // this prayer before the page refetches still writes to the book.
       onCreated({
         id: ref.id,
         text: trimmed,
         authorId: user.uid,
         authorName: profile?.displayName ?? '',
+        authorLocation: profile?.location ?? '',
         authorPhotoURL: profile?.photoURL ?? '',
         authorUsername: profile?.username ?? '',
+        visibility: 'circles',
+        targetUserId: null,
+        targetUsername: '',
+        targetName: '',
         circleIds: [circle.id],
+        circleNames: [circle.name].filter(Boolean),
+        prayedBy: [],
+        prayedCount: 0,
         createdAt: { toDate: () => new Date() }
       });
       setText('');

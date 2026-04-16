@@ -36,18 +36,22 @@ export async function togglePraying(user, prayer) {
     return false;
   }
 
+  // Firestore rejects the whole write if ANY field is undefined, so every
+  // snapshot field gets a hard default here. Optimistic prayer objects
+  // (e.g. the one the circle new-prayer card pushes to local state before
+  // the Firestore ack) commonly omit some of these.
   const snapshot = {
     prayerId: prayer.id,
-    text: prayer.text,
-    authorId: prayer.authorId,
+    text: prayer.text || '',
+    authorId: prayer.authorId || '',
     authorName: prayer.authorName || '',
     authorUsername: prayer.authorUsername || '',
     authorPhotoURL: prayer.authorPhotoURL || '',
     authorLocation: prayer.authorLocation || '',
-    visibility: prayer.visibility,
+    visibility: prayer.visibility || 'public',
     circleIds: prayer.circleIds || [],
     circleNames: prayer.circleNames || [],
-    targetUserId: prayer.targetUserId || null,
+    targetUserId: prayer.targetUserId ?? null,
     targetUsername: prayer.targetUsername || '',
     targetName: prayer.targetName || '',
     // Preserve the original creation timestamp so the card + filters
