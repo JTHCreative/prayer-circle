@@ -11,11 +11,16 @@ service cloud.firestore {
     }
 
     // User profiles: readable by any signed-in user (so friends/circles can look up display names),
-    // writable only by the owner.
+    // writable only by the owner — except for the `friendIds` array, which
+    // either party needs to patch when a friendship is accepted or removed.
+    // Restricting the diff to that single field keeps the rest of the
+    // profile owner-only.
     match /users/{userId} {
       allow read: if isSignedIn();
       allow create: if isSelf(userId);
-      allow update: if isSelf(userId);
+      allow update: if isSelf(userId)
+                    || (isSignedIn()
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['friendIds']));
       allow delete: if false;
 
       // Personal prayer book: snapshots of prayers the owner is praying
@@ -52,8 +57,13 @@ service cloud.firestore {
 
     // Friend requests / friendships. A friendship doc id is the sorted pair "uidA_uidB".
     // Either party can read or delete. Create requires the requester to be one of the pair.
+    //
+    // The read rule also permits fetching non-existent docs so the "do we
+    // already have a friendship/request with this user?" pre-check on
+    // sendRequest doesn't fail on a null `resource`.
     match /friendships/{friendshipId} {
-      allow read: if isSignedIn() && request.auth.uid in resource.data.users;
+      allow read: if isSignedIn()
+                  && (resource == null || request.auth.uid in resource.data.users);
       allow create: if isSignedIn()
                     && request.auth.uid in request.resource.data.users
                     && request.resource.data.users.size() == 2;
