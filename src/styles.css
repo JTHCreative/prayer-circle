@@ -1728,17 +1728,28 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 
 .friends-network-circle {
   position: relative;
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 999px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--card);
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.14);
+  /* Theme gradient border via the standard two-background trick: the
+     padding-box layer paints the inner white disc, the border-box layer
+     paints the gradient through the transparent 2.5px border. */
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
+  border: 2.5px solid transparent;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
+  overflow: hidden;
   z-index: 1;
   transition: transform 0.18s ease, box-shadow 0.18s ease,
     background 0.18s ease, border-color 0.18s ease;
+}
+.friends-network-circle .avatar {
+  border: none;
+  box-shadow: none;
 }
 /* Opaque empty slot — its own fill so it clearly reads as a placeholder
    on top of the line pattern rather than letting the lines show through. */
@@ -1878,6 +1889,46 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .friends-network-cell.is-first-row .friends-network-node:focus-visible .friends-network-card {
   transform: translateX(-50%) translateY(0);
 }
+
+/* Friend profile modal — opens when a friend circle is clicked. */
+.friend-profile-modal { max-width: 440px; }
+.friend-profile-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 6px;
+}
+.friend-profile-head .avatar {
+  border: 2.5px solid transparent;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 6px 16px rgba(79, 70, 229, 0.22);
+}
+.friend-profile-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.friend-profile-id h2 { margin: 0; }
+.friend-profile-id p { margin: 0; font-size: 13px; }
+.friend-profile-bio {
+  margin: 14px 0 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text);
+  padding: 12px 14px;
+  background: var(--primary-soft);
+  border-radius: 10px;
+}
+.friend-profile-actions {
+  margin-top: 18px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.friend-profile-actions button { padding: 8px 14px; font-size: 13px; }
 
 /* Red alert dot on the Friends nav link when incoming requests are pending. */
 .nav-btn-wrap { position: relative; display: inline-flex; }

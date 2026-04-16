@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   arrayRemove,
   arrayUnion,
@@ -38,6 +39,7 @@ const GRID_PAD_ROWS = 8;
 
 export default function Friends() {
   const { user, profile, refreshProfile } = useAuth();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [friends, setFriends] = useState([]);
@@ -46,6 +48,7 @@ export default function Friends() {
   const [status, setStatus] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
+  const [selectedFriend, setSelectedFriend] = useState(null);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -447,7 +450,7 @@ export default function Friends() {
                 return (
                   <div key={i} className={classes.join(' ')}>
                     {u ? (
-                      <FriendNode user={u} onRemove={() => removeFriend(u.id)} />
+                      <FriendNode user={u} onSelect={() => setSelectedFriend(u)} />
                     ) : (
                       <button
                         type="button"
@@ -497,19 +500,47 @@ export default function Friends() {
           onSend={sendRequestByUsername}
         />
       )}
+
+      {selectedFriend && (
+        <FriendProfileModal
+          friend={selectedFriend}
+          currentUser={user}
+          currentProfile={profile}
+          onClose={() => setSelectedFriend(null)}
+          onSendPrayer={() => {
+            navigate(`/new?visibility=friend&to=${selectedFriend.id}`);
+            setSelectedFriend(null);
+          }}
+          onRemove={async () => {
+            await removeFriend(selectedFriend.id);
+            setSelectedFriend(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function FriendNode({ user, onRemove }) {
+function FriendNode({ user, onSelect }) {
   const name =
     user.displayName ||
     [user.firstName, user.lastName].filter(Boolean).join(' ');
   const bio = user.bio || '';
   return (
-    <div className="friends-network-node" tabIndex={0}>
+    <div
+      className="friends-network-node"
+      role="button"
+      tabIndex={0}
+      onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
+    >
       <div className="friends-network-circle">
-        <Avatar user={user} size={56} />
+        <Avatar user={user} size={60} />
       </div>
       <div className="friends-network-card" role="tooltip">
         <div className="friends-network-card-head">
@@ -523,13 +554,6 @@ function FriendNode({ user, onRemove }) {
         {user.location && (
           <p className="friends-network-card-meta">📍 {user.location}</p>
         )}
-        <button
-          type="button"
-          className="danger friends-network-card-remove"
-          onClick={onRemove}
-        >
-          Remove friend
-        </button>
       </div>
     </div>
   );
@@ -594,6 +618,198 @@ function AddFriendModal({ onClose, onSend }) {
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+function FriendProfileModal({
+  friend,
+  currentUser,
+  currentProfile,
+  onClose,
+  onSendPrayer,
+  onRemove
+}) {
+  const [invitingToCircle, setInvitingToCircle] = useState(false);
+  const name =
+    friend.displayName ||
+    [friend.firstName, friend.lastName].filter(Boolean).join(' ');
+
+  return (
+    <div className="overlay" onClick={onClose}>
+      <div
+        className="overlay-card friend-profile-modal"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          type="button"
+          className="overlay-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <div className="friend-profile-head">
+          <Avatar user={friend} size={96} />
+          <div className="friend-profile-id">
+            {name && <h2>{name}</h2>}
+            {friend.username && (
+              <p className="muted">@{friend.username}</p>
+            )}
+            {friend.location && (
+              <p className="muted">📍 {friend.location}</p>
+            )}
+          </div>
+        </div>
+        {friend.bio && <p className="friend-profile-bio">{friend.bio}</p>}
+        <div className="friend-profile-actions">
+          <button type="button" onClick={onSendPrayer}>
+            Send prayer request
+          </button>
+          <button type="button" onClick={() => setInvitingToCircle(true)}>
+            Invite to circle
+          </button>
+          <button type="button" className="danger" onClick={onRemove}>
+            Remove friend
+          </button>
+        </div>
+
+        {invitingToCircle && (
+          <InviteToCircleModal
+            friend={friend}
+            currentUser={currentUser}
+            currentProfile={currentProfile}
+            onClose={() => setInvitingToCircle(false)}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InviteToCircleModal({ friend, currentUser, currentProfile, onClose }) {
+  const [circles, setCircles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [invitedIds, setInvitedIds] = useState(new Set());
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!currentProfile?.circleIds?.length) {
+        if (!cancelled) {
+          setCircles([]);
+          setLoading(false);
+        }
+        return;
+      }
+      const all = [];
+      for (const part of chunk(currentProfile.circleIds, 10)) {
+        const snap = await getDocs(
+          query(collection(db, 'circles'), where(documentId(), 'in', part))
+        );
+        snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
+      }
+      const eligible = all
+        .filter((c) => !(c.members || []).includes(friend.id))
+        .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      if (!cancelled) {
+        setCircles(eligible);
+        setLoading(false);
+      }
+    }
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentProfile, friend.id]);
+
+  async function invite(circle) {
+    if (invitedIds.has(circle.id)) return;
+    await setDoc(
+      doc(
+        db,
+        'users',
+        friend.id,
+        'notifications',
+        `circle-invite-${circle.id}-${currentUser.uid}`
+      ),
+      {
+        type: 'circle_invite',
+        title: 'Prayer circle invite',
+        body: `@${currentProfile?.username || 'A friend'} invited you to join "${circle.name}".`,
+        circleId: circle.id,
+        circleName: circle.name,
+        fromUserId: currentUser.uid,
+        fromUsername: currentProfile?.username || '',
+        fromName: currentProfile?.displayName || '',
+        read: false,
+        createdAt: serverTimestamp()
+      }
+    );
+    setInvitedIds((prev) => {
+      const next = new Set(prev);
+      next.add(circle.id);
+      return next;
+    });
+  }
+
+  const firstName = friend.firstName || friend.displayName || 'your friend';
+
+  return (
+    <div
+      className="overlay"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClose();
+      }}
+    >
+      <div className="overlay-card" onClick={(e) => e.stopPropagation()}>
+        <button
+          type="button"
+          className="overlay-close"
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+        <h2>Invite {firstName} to a circle</h2>
+        <p className="muted">Pick one of your prayer circles.</p>
+        {loading ? (
+          <p className="muted">Loading circles…</p>
+        ) : circles.length === 0 ? (
+          <p className="muted">
+            No eligible circles — {firstName} is already in all of yours, or
+            you haven&rsquo;t joined any circles yet.
+          </p>
+        ) : (
+          <ul className="invite-friends">
+            {circles.map((c) => {
+              const sent = invitedIds.has(c.id);
+              return (
+                <li key={c.id}>
+                  <span className="person">
+                    <span>
+                      <strong>{c.name}</strong>
+                      <small className="muted">
+                        {' '}
+                        · {(c.members || []).length}{' '}
+                        {(c.members || []).length === 1 ? 'member' : 'members'}
+                      </small>
+                    </span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => invite(c)}
+                    disabled={sent}
+                  >
+                    {sent ? 'Invited ✓' : 'Invite'}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
     </div>
   );
