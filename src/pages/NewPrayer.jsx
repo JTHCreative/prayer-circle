@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   addDoc,
   collection,
@@ -15,9 +15,18 @@ import { useAuth } from '../context/AuthContext.jsx';
 export default function NewPrayer() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialVisibility = searchParams.get('visibility') || 'public';
+  const initialTarget = searchParams.get('to') || '';
   const [text, setText] = useState('');
-  const [visibility, setVisibility] = useState('public');
-  const [targetUserId, setTargetUserId] = useState('');
+  const [visibility, setVisibility] = useState(
+    initialVisibility === 'friend' || initialVisibility === 'circles'
+      ? initialVisibility
+      : 'public'
+  );
+  const [targetUserId, setTargetUserId] = useState(
+    initialVisibility === 'friend' ? initialTarget : ''
+  );
   const [selectedCircleIds, setSelectedCircleIds] = useState([]);
   const [friends, setFriends] = useState([]);
   const [circles, setCircles] = useState([]);
