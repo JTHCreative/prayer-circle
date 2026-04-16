@@ -1148,6 +1148,95 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   border-color: var(--primary);
 }
 
+/* Friends grid */
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 18px 12px;
+  padding: 8px 4px 4px;
+}
+.friends-grid-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.friends-grid-avatar {
+  position: relative;
+  padding: 0;
+  border: none;
+  background: transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  line-height: 0;
+  box-shadow: none;
+  transition: transform 0.15s ease;
+}
+.friends-grid-avatar:hover,
+.friends-grid-avatar:focus-visible {
+  transform: translateY(-2px);
+}
+.friends-grid-avatar .avatar {
+  width: 72px;
+  height: 72px;
+  font-size: 26px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+.friends-grid-remove {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: scale(0.8);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  pointer-events: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+.friends-grid-avatar:hover .friends-grid-remove,
+.friends-grid-avatar:focus-visible .friends-grid-remove {
+  opacity: 1;
+  transform: scale(1);
+}
+.friends-grid-avatar-empty {
+  width: 72px;
+  height: 72px;
+  border-radius: 999px;
+  background: var(--primary-soft);
+  border: 2px dashed var(--border);
+  cursor: default;
+}
+.friends-grid-item-empty { opacity: 0.55; }
+.friends-grid-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.friends-grid-handle {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Notifications bell + dropdown */
 .notifications { position: relative; }
 .bell-btn {

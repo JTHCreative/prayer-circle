@@ -215,25 +215,32 @@ export default function Friends() {
 
       <div className="card">
         <h2>Your friends</h2>
-        {friends.length === 0 ? (
-          <p className="muted">You haven't added any friends yet.</p>
-        ) : (
-          <ul className="list">
-            {friends.map((f) => (
-              <li key={f.id} className="list-row">
-                <span className="person">
-                  <Avatar user={f} size={32} />
-                  <span>
-                    {f.displayName}
-                    {f.username && <small className="muted"> · @{f.username}</small>}
-                    {f.location && <small className="muted"> · 📍 {f.location}</small>}
-                  </span>
-                </span>
-                <button className="danger" onClick={() => removeFriend(f.id)}>Remove</button>
-              </li>
-            ))}
-          </ul>
+        {friends.length === 0 && (
+          <p className="muted">You haven't added any friends yet. Search above to find people you know.</p>
         )}
+        <div className="friends-grid">
+          {friends.map((f) => (
+            <div key={f.id} className="friends-grid-item">
+              <button
+                type="button"
+                className="friends-grid-avatar"
+                title={f.displayName}
+                aria-label={`Remove ${f.displayName}`}
+                onClick={() => removeFriend(f.id)}
+              >
+                <Avatar user={f} size={72} />
+                <span className="friends-grid-remove" aria-hidden="true">×</span>
+              </button>
+              <span className="friends-grid-name">{f.displayName}</span>
+              {f.username && <span className="friends-grid-handle">@{f.username}</span>}
+            </div>
+          ))}
+          {Array.from({ length: Math.max(0, 8 - friends.length) }).map((_, i) => (
+            <div key={`empty-${i}`} className="friends-grid-item friends-grid-item-empty" aria-hidden="true">
+              <div className="friends-grid-avatar friends-grid-avatar-empty" />
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
