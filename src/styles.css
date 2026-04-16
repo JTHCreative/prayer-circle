@@ -582,7 +582,11 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   position: absolute;
   left: -17px;
   top: -17px;
-  animation: circle-bubble-ring-spin 45s linear infinite reverse;
+  /* Cancel both the ring's animated spin AND the item's static
+     rotate(var(--angle)) so every avatar stays upright. If we only used
+     the ring's reverse spin, an avatar placed at angle=180deg would
+     start upside-down and never come back. */
+  animation: circle-bubble-ring-counter-spin 45s linear infinite;
 }
 .circle-bubble-ring-counter .avatar {
   border: 2px solid rgba(255, 255, 255, 0.9);
@@ -594,6 +598,10 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 @keyframes circle-bubble-ring-spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+@keyframes circle-bubble-ring-counter-spin {
+  from { transform: rotate(calc(-1 * var(--angle))); }
+  to { transform: rotate(calc(-1 * var(--angle) - 360deg)); }
 }
 
 /* Bubble category icons */
