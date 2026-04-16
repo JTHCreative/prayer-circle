@@ -118,6 +118,7 @@ input, textarea, select {
   border: 1.5px solid var(--border);
   border-radius: 6px;
   font-size: 14px;
+  color: var(--text);
   background: #fff;
   transition: box-shadow 180ms ease, background 180ms ease;
 }
