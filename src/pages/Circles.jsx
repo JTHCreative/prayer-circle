@@ -19,6 +19,7 @@ import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
 import { PrayIcon, TrashIcon } from '../components/icons.jsx';
+import { CircleIcon, CIRCLE_ICON_KEYS } from '../components/circleIcons.jsx';
 import { togglePraying } from '../utils/prayers.js';
 
 // Gentle gradient palettes for each bubble so the space has visual variety
@@ -37,9 +38,16 @@ function hashId(id) {
   return Math.abs(h);
 }
 
+// Bubble diameters by community size — three tiers so a circle's heft on
+// the canvas tracks how active it is rather than scaling continuously.
+const BUBBLE_SIZE_SMALL = 90;
+const BUBBLE_SIZE_MEDIUM = 130;
+const BUBBLE_SIZE_LARGE = 175;
 function bubbleSize(memberCount) {
-  const base = 80;
-  return Math.min(170, base + Math.sqrt(memberCount || 1) * 22);
+  const n = memberCount || 1;
+  if (n >= 21) return BUBBLE_SIZE_LARGE;
+  if (n >= 6) return BUBBLE_SIZE_MEDIUM;
+  return BUBBLE_SIZE_SMALL;
 }
 
 function chunk(arr, size) {
@@ -453,10 +461,11 @@ export default function Circles() {
     setPanelPrayers((prev) => prev.filter((p) => p.id !== prayer.id));
   }
 
-  async function handleCreate({ name, description }) {
+  async function handleCreate({ name, description, iconKey }) {
     const ref = await addDoc(collection(db, 'circles'), {
       name: name.trim(),
       description: description.trim(),
+      iconKey: iconKey || '',
       createdBy: user.uid,
       members: [user.uid],
       createdAt: serverTimestamp()
@@ -471,6 +480,7 @@ export default function Circles() {
         id: ref.id,
         name: name.trim(),
         description: description.trim(),
+        iconKey: iconKey || '',
         createdBy: user.uid,
         members: [user.uid],
         createdAt: null
@@ -552,6 +562,13 @@ export default function Circles() {
             >
               {!isExpanded && (
                 <>
+                  {c.iconKey && (
+                    <CircleIcon
+                      name={c.iconKey}
+                      size={Math.max(20, Math.floor(baseSize * 0.32))}
+                      className="circle-bubble-icon"
+                    />
+                  )}
                   <span className="circle-bubble-name">{c.name}</span>
                   <span className="circle-bubble-count">{memberCount}</span>
                 </>
@@ -588,6 +605,13 @@ export default function Circles() {
                     >
                       ×
                     </button>
+                    {c.iconKey && (
+                      <CircleIcon
+                        name={c.iconKey}
+                        size={48}
+                        className="circle-bubble-icon-large"
+                      />
+                    )}
                     <h2 className="circle-bubble-title">{c.name}</h2>
                     <p className="circle-bubble-meta">
                       {memberCount} {memberCount === 1 ? 'member' : 'members'}
@@ -689,6 +713,7 @@ export default function Circles() {
 function CreateCircleModal({ onCancel, onCreate }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [iconKey, setIconKey] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -698,7 +723,7 @@ function CreateCircleModal({ onCancel, onCreate }) {
     setBusy(true);
     setError('');
     try {
-      await onCreate({ name, description });
+      await onCreate({ name, description, iconKey });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -732,6 +757,23 @@ function CreateCircleModal({ onCancel, onCreate }) {
               placeholder="What is this circle about?"
             />
           </label>
+          <div>
+            <p className="label">Icon (optional)</p>
+            <div className="circle-icon-picker">
+              {CIRCLE_ICON_KEYS.map((key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`circle-icon-option${iconKey === key ? ' selected' : ''}`}
+                  onClick={() => setIconKey((prev) => (prev === key ? '' : key))}
+                  aria-label={`${key} icon`}
+                  aria-pressed={iconKey === key}
+                >
+                  <CircleIcon name={key} size={22} />
+                </button>
+              ))}
+            </div>
+          </div>
           {error && <p className="error">{error}</p>}
           <div className="overlay-actions">
             <button type="submit" disabled={busy}>
