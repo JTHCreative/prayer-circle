@@ -92,6 +92,7 @@ export default function Circles() {
   const bubbleRefs = useRef({});
   const dataRef = useRef([]);
   const selectedRef = useRef(null);
+  const togglingRef = useRef(new Set());
 
   const isMemberOfSelected =
     !!selected && (selected.members || []).includes(user?.uid);
@@ -422,7 +423,7 @@ export default function Circles() {
           type: 'circle_deleted',
           title: 'Prayer circle deleted',
           body: `"${circle.name}" was removed by @${
-            profile?.username || 'the owner'
+            profile?.username || 'a prayer leader'
           }.`,
           circleId: circle.id,
           circleName: circle.name,
@@ -452,21 +453,35 @@ export default function Circles() {
   }
 
   async function handleTogglePrayerPray(prayer) {
+    // Drop rapid re-clicks — togglePraying reads prayer.prayedBy to decide
+    // direction, so concurrent calls with the same stale snapshot would
+    // all write +1 and stack the count.
+    if (togglingRef.current.has(prayer.id)) return;
+    togglingRef.current.add(prayer.id);
     const wasPraying = (prayer.prayedBy || []).includes(user.uid);
-    await togglePraying(user, prayer);
+    // Optimistic update so the button flips before the DB round-trip and
+    // the next render's prayer prop already reflects the new state.
     setPanelPrayers((prev) =>
-      prev.map((p) =>
-        p.id === prayer.id
-          ? {
-              ...p,
-              prayedBy: wasPraying
-                ? (p.prayedBy || []).filter((u) => u !== user.uid)
-                : [...(p.prayedBy || []), user.uid],
-              prayedCount: (p.prayedCount || 0) + (wasPraying ? -1 : 1)
-            }
-          : p
-      )
+      prev.map((p) => {
+        if (p.id !== prayer.id) return p;
+        const current = p.prayedBy || [];
+        const prayedBy = wasPraying
+          ? current.filter((u) => u !== user.uid)
+          : current.includes(user.uid)
+            ? current
+            : [...current, user.uid];
+        return {
+          ...p,
+          prayedBy,
+          prayedCount: Math.max(0, (p.prayedCount || 0) + (wasPraying ? -1 : 1))
+        };
+      })
     );
+    try {
+      await togglePraying(user, prayer);
+    } finally {
+      togglingRef.current.delete(prayer.id);
+    }
   }
 
   async function handleDeletePrayer(prayer) {
@@ -1162,7 +1177,7 @@ function CircleDetailPanel({
       <section className="circle-detail-section">
         <div className="circle-detail-roster-labels">
           <span>Members</span>
-          <span>Owner</span>
+          <span>Prayer Leaders</span>
         </div>
         <div className="circle-detail-roster">
           <div className="circle-detail-roster-side circle-detail-roster-members">

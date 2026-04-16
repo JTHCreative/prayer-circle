@@ -603,12 +603,13 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 /* Icon picker grid in the create-circle modal */
 .circle-icon-picker {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
   margin-top: 6px;
 }
 .circle-icon-option {
   width: 100%;
+  max-width: 44px;
   aspect-ratio: 1 / 1;
   padding: 0;
   display: flex;
@@ -637,29 +638,30 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   color: #fff;
 }
 
-/* Gradient color picker — circular swatches that mirror the bubble look. */
+/* Gradient color picker — small circular swatches that mirror the bubble look. */
 .circle-gradient-picker {
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
   margin-top: 6px;
 }
 .circle-gradient-option {
   width: 100%;
+  max-width: 34px;
   aspect-ratio: 1 / 1;
   padding: 0;
-  border: 2.5px solid transparent;
+  border: 2px solid transparent;
   border-radius: 999px;
   box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
   transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
 }
 .circle-gradient-option:hover {
-  transform: scale(1.06);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);
+  transform: scale(1.08);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.25);
 }
 .circle-gradient-option.selected {
   border-color: var(--text);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3), 0 3px 10px rgba(15, 23, 42, 0.18);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.35), 0 3px 8px rgba(15, 23, 42, 0.18);
 }
 .circle-bubble-avatars {
   display: inline-flex;
@@ -731,7 +733,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   text-transform: uppercase;
   color: var(--muted);
 }
-/* Combined Members | Owner roster */
+/* Combined Members | Prayer Leaders roster */
 .circle-detail-roster-labels {
   display: flex;
   justify-content: space-between;
@@ -1029,9 +1031,11 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .overlay-card {
   background: #fff;
   border-radius: 18px;
-  padding: 28px;
+  padding: 26px 28px 24px;
   width: 100%;
-  max-width: 460px;
+  max-width: 640px;
+  max-height: 90vh;
+  overflow-y: auto;
   position: relative;
   box-shadow: 0 20px 60px rgba(15, 23, 42, 0.28);
   animation: overlay-pop-in 200ms cubic-bezier(0.2, 0.8, 0.2, 1.15);
@@ -1040,6 +1044,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
     linear-gradient(#fff, #fff) padding-box,
     var(--btn-gradient) border-box;
 }
+.overlay-card textarea { resize: vertical; max-height: 140px; }
 @keyframes overlay-pop-in {
   from { transform: scale(0.92); opacity: 0; }
   to { transform: scale(1); opacity: 1; }

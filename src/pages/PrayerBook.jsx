@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
@@ -24,6 +24,7 @@ export default function PrayerBook() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const togglingRef = useRef(new Set());
 
   // Filter state
   const [visibility, setVisibility] = useState('all');
@@ -136,9 +137,18 @@ export default function PrayerBook() {
 
   async function handleUnpray(entry) {
     // All entries here are ones the user is praying for, so this always
-    // removes from the book.
-    await togglePraying(user, entry);
+    // removes from the book. Guard against rapid re-clicks — togglePraying
+    // reads prayedBy to decide direction, so a second in-flight call with
+    // the same stale snapshot would try to un-pray again and miscount.
+    if (togglingRef.current.has(entry.id)) return;
+    togglingRef.current.add(entry.id);
+    // Drop the row optimistically so the UI reflects the tap immediately.
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+    try {
+      await togglePraying(user, entry);
+    } finally {
+      togglingRef.current.delete(entry.id);
+    }
   }
 
   function resetFilters() {
