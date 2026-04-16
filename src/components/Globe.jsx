@@ -38,21 +38,21 @@ export default function Globe() {
     mount.appendChild(renderer.domElement);
 
     // --- Lights --------------------------------------------------------------
-    // Very bright ambient so the whole globe reads clearly from every angle,
-    // plus a key light for form, a strong fill light on the opposite side so
-    // the "night" side stays lit, and a rim light to catch the edge.
-    const ambient = new THREE.AmbientLight(0xffffff, 2.2);
+    // Moderate ambient + strong key + strong fill/rim gives shaded form
+    // without flattening contrast. Fill picks up a cool blue tint, rim picks
+    // up a warm violet tint, so light and shadow sides read distinctly.
+    const ambient = new THREE.AmbientLight(0xffffff, 1.1);
     scene.add(ambient);
 
-    const keyLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    const keyLight = new THREE.DirectionalLight(0xfff3e0, 3.0);
     keyLight.position.set(5, 3, 5);
     scene.add(keyLight);
 
-    const fillLight = new THREE.DirectionalLight(0xd6e4ff, 1.4);
+    const fillLight = new THREE.DirectionalLight(0xb8d4ff, 2.0);
     fillLight.position.set(-5, -1, -3);
     scene.add(fillLight);
 
-    const rimLight = new THREE.DirectionalLight(0xe4d6ff, 0.8);
+    const rimLight = new THREE.DirectionalLight(0xc9b3ff, 1.8);
     rimLight.position.set(-2, 4, -5);
     scene.add(rimLight);
 
@@ -60,16 +60,53 @@ export default function Globe() {
     const geometry = new THREE.SphereGeometry(1, 64, 64);
     const material = new THREE.MeshPhongMaterial({
       color: 0xb8c6da, // fallback while the texture loads
-      shininess: 4,
-      // Bright self-illumination so the texture colors read clearly even on
-      // the shadowed side.
-      emissive: 0x1a2f5c,
-      emissiveIntensity: 0.6
+      shininess: 8,
+      specular: 0x222b3a,
+      // Faint self-illumination so the shadow side keeps some texture detail
+      // without washing out the contrast from the directional lights.
+      emissive: 0x0e1a35,
+      emissiveIntensity: 0.35
     });
     const earth = new THREE.Mesh(geometry, material);
     // Tilt so North is up-ish and it feels less static.
     earth.rotation.z = (23.4 * Math.PI) / 180;
     scene.add(earth);
+
+    // --- Atmosphere halo -----------------------------------------------------
+    // A slightly larger back-facing sphere with a Fresnel-weighted additive
+    // shader gives the Earth a soft cyan glow around its silhouette, which
+    // both separates it from the page background and sells the planet.
+    const atmosphereGeometry = new THREE.SphereGeometry(1.18, 64, 64);
+    const atmosphereMaterial = new THREE.ShaderMaterial({
+      side: THREE.BackSide,
+      blending: THREE.AdditiveBlending,
+      transparent: true,
+      depthWrite: false,
+      uniforms: {
+        glowColor: { value: new THREE.Color(0x5aa9ff) },
+        power: { value: 2.8 },
+        intensity: { value: 1.35 }
+      },
+      vertexShader: `
+        varying vec3 vNormal;
+        void main() {
+          vNormal = normalize(normalMatrix * normal);
+          gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+        }
+      `,
+      fragmentShader: `
+        varying vec3 vNormal;
+        uniform vec3 glowColor;
+        uniform float power;
+        uniform float intensity;
+        void main() {
+          float rim = pow(0.72 - dot(vNormal, vec3(0.0, 0.0, 1.0)), power);
+          gl_FragColor = vec4(glowColor, 1.0) * rim * intensity;
+        }
+      `
+    });
+    const atmosphere = new THREE.Mesh(atmosphereGeometry, atmosphereMaterial);
+    scene.add(atmosphere);
 
     const loader = new THREE.TextureLoader();
     loader.setCrossOrigin('anonymous');
@@ -81,7 +118,7 @@ export default function Globe() {
         material.map = texture;
         material.emissiveMap = texture;    // use same texture for emissive tint
         material.emissive.set(0xffffff);   // white emissive lets texture colors show fully
-        material.emissiveIntensity = 0.5;  // noticeable glow so the dark side stays readable
+        material.emissiveIntensity = 0.28; // keep continents visible on the shadow side without flattening contrast
         material.color.set(0xffffff);
         material.needsUpdate = true;
       },
@@ -142,6 +179,8 @@ export default function Globe() {
       geometry.dispose();
       if (material.map) material.map.dispose();
       material.dispose();
+      atmosphereGeometry.dispose();
+      atmosphereMaterial.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) {
         mount.removeChild(renderer.domElement);

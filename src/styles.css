@@ -687,6 +687,14 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   -webkit-overflow-scrolling: touch;
   padding: 4px 4px 14px;
   scrollbar-width: thin;
+  cursor: grab;
+  user-select: none;
+  touch-action: pan-x;
+}
+.prayer-swipe-track.dragging {
+  cursor: grabbing;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
 }
 .prayer-swipe-card {
   flex: 0 0 min(320px, 85%);
@@ -709,7 +717,16 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   line-height: 1.5;
   color: var(--text);
 }
-.prayer-swipe-card-date { font-size: 11px; margin-top: auto; }
+.prayer-swipe-card-date { font-size: 11px; }
+.prayer-swipe-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
 .prayer-swipe-card-new {
   background:
     linear-gradient(#ffffff, #ffffff) padding-box,
