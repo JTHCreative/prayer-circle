@@ -422,7 +422,7 @@ export default function Circles() {
           type: 'circle_deleted',
           title: 'Prayer circle deleted',
           body: `"${circle.name}" was removed by @${
-            profile?.username || 'the owner'
+            profile?.username || 'a prayer leader'
           }.`,
           circleId: circle.id,
           circleName: circle.name,
@@ -1162,7 +1162,7 @@ function CircleDetailPanel({
       <section className="circle-detail-section">
         <div className="circle-detail-roster-labels">
           <span>Members</span>
-          <span>Owner</span>
+          <span>Prayer Leaders</span>
         </div>
         <div className="circle-detail-roster">
           <div className="circle-detail-roster-side circle-detail-roster-members">

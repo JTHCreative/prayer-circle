@@ -110,7 +110,7 @@ export default function CircleDetail() {
                   {m.location && <small className="muted"> · 📍 {m.location}</small>}
                 </span>
               </span>
-              {m.id === circle.createdBy && <span className="pill">Creator</span>}
+              {m.id === circle.createdBy && <span className="pill">Prayer Leader</span>}
             </li>
           ))}
         </ul>

@@ -733,7 +733,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   text-transform: uppercase;
   color: var(--muted);
 }
-/* Combined Members | Owner roster */
+/* Combined Members | Prayer Leaders roster */
 .circle-detail-roster-labels {
   display: flex;
   justify-content: space-between;
