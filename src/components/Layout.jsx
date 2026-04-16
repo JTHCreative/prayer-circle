@@ -1,4 +1,7 @@
+import { useEffect, useState } from 'react';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
 import NotificationsMenu from './NotificationsMenu.jsx';
@@ -13,11 +16,35 @@ function IconNewPrayer() {
 }
 
 export default function Layout() {
-  const { profile, logout } = useAuth();
+  const { user, profile, logout } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const wide = location.pathname === '/';
   const circlesPage = location.pathname === '/circles';
+  const friendsPage = location.pathname === '/friends';
+  const [pendingRequests, setPendingRequests] = useState(0);
+
+  // Drives the red dot on the Friends nav link. Counts pending friendships
+  // addressed to me (ones I didn't initiate).
+  useEffect(() => {
+    if (!user?.uid) {
+      setPendingRequests(0);
+      return;
+    }
+    const q = query(
+      collection(db, 'friendships'),
+      where('users', 'array-contains', user.uid)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      let count = 0;
+      snap.forEach((d) => {
+        const data = d.data();
+        if (data.status === 'pending' && data.requestedBy !== user.uid) count += 1;
+      });
+      setPendingRequests(count);
+    });
+    return unsub;
+  }, [user?.uid]);
 
   async function handleLogout() {
     await logout();
@@ -39,10 +66,18 @@ export default function Layout() {
             <BookIcon className="nav-icon" />
             <span>Prayer Book</span>
           </NavLink>
-          <NavLink to="/friends" className="nav-btn">
-            <PublicIcon className="nav-icon" />
-            <span>Friends</span>
-          </NavLink>
+          <span className="nav-btn-wrap">
+            <NavLink to="/friends" className="nav-btn">
+              <PublicIcon className="nav-icon" />
+              <span>Friends</span>
+            </NavLink>
+            {pendingRequests > 0 && (
+              <span
+                className="nav-alert-dot"
+                aria-label={`${pendingRequests} pending friend request${pendingRequests === 1 ? '' : 's'}`}
+              />
+            )}
+          </span>
           <NavLink to="/circles" className="nav-btn">
             <CircleVisibilityIcon className="nav-icon" />
             <span>Circles</span>
@@ -66,7 +101,7 @@ export default function Layout() {
         className={
           wide
             ? 'container container-home'
-            : circlesPage
+            : circlesPage || friendsPage
             ? 'container container-wide'
             : 'container'
         }
