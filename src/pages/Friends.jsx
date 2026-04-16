@@ -326,7 +326,7 @@ function FriendNode({ user, onRemove }) {
   const name =
     user.displayName ||
     [user.firstName, user.lastName].filter(Boolean).join(' ');
-  const bio = user.bio || user.description || '';
+  const bio = user.bio || '';
   return (
     <div className="friends-network-node" tabIndex={0}>
       <div className="friends-network-circle">
