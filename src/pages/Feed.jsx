@@ -16,6 +16,7 @@ import Globe from '../components/Globe.jsx';
 import DailyVerseCard from '../components/DailyVerseCard.jsx';
 import PrayerCard from '../components/PrayerCard.jsx';
 import { togglePraying } from '../utils/prayers.js';
+import { chunk } from '../utils/arrays.js';
 
 const TABS = [
   { key: 'all', label: 'All' },
@@ -211,8 +212,3 @@ export default function Feed() {
   );
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}

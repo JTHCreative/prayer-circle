@@ -11,6 +11,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { chunk } from '../utils/arrays.js';
 
 export default function NewPrayer() {
   const { user, profile } = useAuth();
@@ -218,8 +219,3 @@ export default function NewPrayer() {
   );
 }
 
-function chunk(arr, size) {
-  const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-  return out;
-}

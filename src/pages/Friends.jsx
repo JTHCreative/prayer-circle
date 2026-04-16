@@ -18,6 +18,8 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
+import { chunk } from '../utils/arrays.js';
+import { sendCircleInviteNotification } from '../utils/notifications.js';
 
 // Friendship doc id is the two uids sorted alphabetically joined by "_".
 function friendshipId(a, b) {
@@ -127,37 +129,11 @@ export default function Friends() {
 
   async function loadFriendshipData() {
     if (!user) return;
-    if (profile?.friendIds?.length) {
-      const parts = chunk(profile.friendIds, 10);
-      const all = [];
-      for (const p of parts) {
-        const snap = await getDocs(
-          query(collection(db, 'users'), where(documentId(), 'in', p))
-        );
-        snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-      }
-      setFriends(all);
-    } else {
-      setFriends([]);
-    }
-
-    const snap = await getDocs(
-      query(collection(db, 'friendships'), where('users', 'array-contains', user.uid))
-    );
-    const inc = [];
-    const out = [];
-    for (const d of snap.docs) {
-      const data = d.data();
-      if (data.status !== 'pending') continue;
-      const other = data.users.find((u) => u !== user.uid);
-      const userSnap = await getDoc(doc(db, 'users', other));
-      const entry = {
-        id: d.id,
-        other: userSnap.exists() ? { id: userSnap.id, ...userSnap.data() } : null
-      };
-      if (data.requestedBy === user.uid) out.push(entry);
-      else inc.push(entry);
-    }
+    const [friendList, { inc, out }] = await Promise.all([
+      fetchFriendProfiles(profile?.friendIds || []),
+      fetchPendingRequests(user.uid)
+    ]);
+    setFriends(friendList);
     setIncoming(inc);
     setOutgoing(out);
   }
@@ -267,8 +243,10 @@ export default function Friends() {
       await deleteDoc(
         doc(db, 'users', user.uid, 'notifications', friendRequestNotifId(otherId))
       );
-    } catch {
-      /* ignore — notification may have already been dismissed */
+    } catch (err) {
+      // Non-fatal — the notification may have already been dismissed —
+      // but surface it so misconfigured rules don't fail silently.
+      console.warn('Failed to clear friend-request notification', err);
     }
   }
 
@@ -504,8 +482,6 @@ export default function Friends() {
       {selectedFriend && (
         <FriendProfileModal
           friend={selectedFriend}
-          currentUser={user}
-          currentProfile={profile}
           onClose={() => setSelectedFriend(null)}
           onSendPrayer={() => {
             navigate(`/new?visibility=friend&to=${selectedFriend.id}`);
@@ -623,14 +599,7 @@ function AddFriendModal({ onClose, onSend }) {
   );
 }
 
-function FriendProfileModal({
-  friend,
-  currentUser,
-  currentProfile,
-  onClose,
-  onSendPrayer,
-  onRemove
-}) {
+function FriendProfileModal({ friend, onClose, onSendPrayer, onRemove }) {
   const [invitingToCircle, setInvitingToCircle] = useState(false);
   const name =
     friend.displayName ||
@@ -678,8 +647,6 @@ function FriendProfileModal({
         {invitingToCircle && (
           <InviteToCircleModal
             friend={friend}
-            currentUser={currentUser}
-            currentProfile={currentProfile}
             onClose={() => setInvitingToCircle(false)}
           />
         )}
@@ -688,7 +655,8 @@ function FriendProfileModal({
   );
 }
 
-function InviteToCircleModal({ friend, currentUser, currentProfile, onClose }) {
+function InviteToCircleModal({ friend, onClose }) {
+  const { user, profile } = useAuth();
   const [circles, setCircles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [invitedIds, setInvitedIds] = useState(new Set());
@@ -696,20 +664,7 @@ function InviteToCircleModal({ friend, currentUser, currentProfile, onClose }) {
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      if (!currentProfile?.circleIds?.length) {
-        if (!cancelled) {
-          setCircles([]);
-          setLoading(false);
-        }
-        return;
-      }
-      const all = [];
-      for (const part of chunk(currentProfile.circleIds, 10)) {
-        const snap = await getDocs(
-          query(collection(db, 'circles'), where(documentId(), 'in', part))
-        );
-        snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-      }
+      const all = await fetchCirclesByIds(profile?.circleIds || []);
       const eligible = all
         .filter((c) => !(c.members || []).includes(friend.id))
         .sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -722,31 +677,19 @@ function InviteToCircleModal({ friend, currentUser, currentProfile, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [currentProfile, friend.id]);
+  }, [profile, friend.id]);
 
   async function invite(circle) {
     if (invitedIds.has(circle.id)) return;
-    await setDoc(
-      doc(
-        db,
-        'users',
-        friend.id,
-        'notifications',
-        `circle-invite-${circle.id}-${currentUser.uid}`
-      ),
-      {
-        type: 'circle_invite',
-        title: 'Prayer circle invite',
-        body: `@${currentProfile?.username || 'A friend'} invited you to join "${circle.name}".`,
-        circleId: circle.id,
-        circleName: circle.name,
-        fromUserId: currentUser.uid,
-        fromUsername: currentProfile?.username || '',
-        fromName: currentProfile?.displayName || '',
-        read: false,
-        createdAt: serverTimestamp()
+    await sendCircleInviteNotification({
+      toUserId: friend.id,
+      circle,
+      inviter: {
+        uid: user.uid,
+        username: profile?.username,
+        displayName: profile?.displayName
       }
-    );
+    });
     setInvitedIds((prev) => {
       const next = new Set(prev);
       next.add(circle.id);
@@ -828,8 +771,57 @@ function PlusIcon() {
   );
 }
 
-function chunk(arr, size) {
+// Batch-fetch user profiles for a list of uids. Firestore caps
+// `in` queries at 10, so we chunk and run the batches in parallel.
+async function fetchUserProfiles(uids) {
+  if (!uids?.length) return [];
+  const snaps = await Promise.all(
+    chunk(uids, 10).map((part) =>
+      getDocs(query(collection(db, 'users'), where(documentId(), 'in', part)))
+    )
+  );
   const out = [];
-  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
   return out;
 }
+
+async function fetchFriendProfiles(friendIds) {
+  return fetchUserProfiles(friendIds);
+}
+
+async function fetchCirclesByIds(circleIds) {
+  if (!circleIds?.length) return [];
+  const snaps = await Promise.all(
+    chunk(circleIds, 10).map((part) =>
+      getDocs(query(collection(db, 'circles'), where(documentId(), 'in', part)))
+    )
+  );
+  const out = [];
+  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
+  return out;
+}
+
+// Load pending friendships involving me and hydrate each with the other
+// party's profile in a single batched call, avoiding the N+1 getDoc loop.
+async function fetchPendingRequests(uid) {
+  const snap = await getDocs(
+    query(collection(db, 'friendships'), where('users', 'array-contains', uid))
+  );
+  const pending = [];
+  snap.forEach((d) => {
+    const data = d.data();
+    if (data.status !== 'pending') return;
+    const other = data.users.find((u) => u !== uid);
+    pending.push({ id: d.id, other, requestedByMe: data.requestedBy === uid });
+  });
+  const profiles = await fetchUserProfiles(pending.map((p) => p.other));
+  const byId = new Map(profiles.map((p) => [p.id, p]));
+  const inc = [];
+  const out = [];
+  for (const p of pending) {
+    const entry = { id: p.id, other: byId.get(p.other) || null };
+    (p.requestedByMe ? out : inc).push(entry);
+  }
+  return { inc, out };
+}
+
