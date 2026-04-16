@@ -97,7 +97,10 @@ export default function Globe() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.08;
-    controls.enableZoom = false;
+    controls.enableZoom = true;
+    controls.zoomSpeed = 0.8;
+    controls.minDistance = 1.4; // can't zoom closer than just above the surface
+    controls.maxDistance = 6;   // far enough to see the whole globe with margin
     controls.enablePan = false;
     controls.rotateSpeed = 0.45;
     controls.autoRotate = true;
