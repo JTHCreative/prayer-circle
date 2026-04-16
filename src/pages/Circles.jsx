@@ -757,7 +757,7 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
         >
           ×
         </button>
-        <h2>Invite to {circle.name}</h2>
+        <h2>Invite to {circle.name} Prayer Circle</h2>
         <p className="muted">
           Send an invite to a friend or share a link anyone can use to join.
         </p>
