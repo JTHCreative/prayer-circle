@@ -135,6 +135,9 @@ export default function Feed() {
     );
     try {
       await togglePraying(user, prayer);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to toggle praying', err);
     } finally {
       togglingRef.current.delete(prayer.id);
     }

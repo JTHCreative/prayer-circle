@@ -146,6 +146,9 @@ export default function PrayerBook() {
     setEntries((prev) => prev.filter((e) => e.id !== entry.id));
     try {
       await togglePraying(user, entry);
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('Failed to remove prayer from book', err);
     } finally {
       togglingRef.current.delete(entry.id);
     }
