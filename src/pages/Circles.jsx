@@ -218,6 +218,10 @@ export default function Circles() {
   }, []);
 
   // Seed bubble positions/velocities whenever the circle list changes.
+  // Preserve position, velocity, drag, and snap state for circles we've
+  // already placed — otherwise editing a circle (which updates the
+  // circles array) would re-roll every bubble's position and throw the
+  // currently-selected bubble off-center away from its snap target.
   useEffect(() => {
     const container = containerRef.current;
     if (!container || circles.length === 0) {
@@ -225,9 +229,15 @@ export default function Circles() {
       return;
     }
     const rect = container.getBoundingClientRect();
+    const existing = new Map(dataRef.current.map((d) => [d.id, d]));
     dataRef.current = circles.map((c) => {
       const members = c.members?.length || 1;
       const size = bubbleSize(members);
+      const prev = existing.get(c.id);
+      if (prev) {
+        // Keep motion state; only pick up the (possibly) new size.
+        return { ...prev, size };
+      }
       return {
         id: c.id,
         size,
@@ -249,8 +259,9 @@ export default function Circles() {
         return;
       }
       const rect = container.getBoundingClientRect();
-      const paused = !!selectedRef.current;
+      const selectedId = selectedRef.current?.id;
       for (const b of dataRef.current) {
+        const isSelected = b.id === selectedId;
         if (b.snapping) {
           // Ease toward the target (expand-to-center animation)
           b.x += (b.targetX - b.x) * 0.18;
@@ -263,7 +274,7 @@ export default function Circles() {
             b.y = b.targetY;
             b.snapping = false;
           }
-        } else if (!paused && !b.dragging) {
+        } else if (!isSelected && !b.dragging) {
           b.x += b.vx;
           b.y += b.vy;
           if (b.x <= 0) { b.x = 0; b.vx = -b.vx; }
