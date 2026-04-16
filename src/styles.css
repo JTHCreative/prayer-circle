@@ -539,21 +539,58 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 .circle-bubble-desc {
   margin: 0;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 400;
-  line-height: 1.45;
-  padding: 8px 12px;
+  font-style: italic;
+  line-height: 1.5;
+  padding: 10px 14px;
   border-radius: 10px;
   background: rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(4px);
   max-width: 100%;
-  max-height: 90px;
+  max-height: 120px;
   overflow: hidden;
   text-overflow: ellipsis;
   display: -webkit-box;
-  -webkit-line-clamp: 4;
+  -webkit-line-clamp: 5;
   -webkit-box-orient: vertical;
   white-space: pre-wrap;
+}
+
+/* Ring of member avatars orbiting the expanded bubble */
+.circle-bubble-ring {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  animation:
+    circle-bubble-ring-in 400ms ease 240ms forwards,
+    circle-bubble-ring-spin 45s linear infinite;
+}
+.circle-bubble-ring-item {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  transform: rotate(var(--angle)) translateY(-155px);
+}
+.circle-bubble-ring-counter {
+  position: absolute;
+  left: -17px;
+  top: -17px;
+  animation: circle-bubble-ring-spin 45s linear infinite reverse;
+}
+.circle-bubble-ring-counter .avatar {
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.35);
+}
+@keyframes circle-bubble-ring-in {
+  to { opacity: 1; }
+}
+@keyframes circle-bubble-ring-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 .circle-bubble-avatars {
   display: inline-flex;
@@ -625,11 +662,52 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   text-transform: uppercase;
   color: var(--muted);
 }
-.circle-members-grid {
+/* Combined Members | Owner roster */
+.circle-detail-roster-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.circle-detail-roster {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 0;
+}
+.circle-detail-roster-side {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px 12px;
+  gap: 12px;
+  align-items: center;
+  min-height: 56px;
 }
+.circle-detail-roster-members {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+}
+.circle-detail-roster-owners {
+  flex: 0 0 auto;
+  justify-content: flex-end;
+}
+.circle-detail-roster-divider {
+  width: 2px;
+  align-self: stretch;
+  min-height: 56px;
+  background: var(--border);
+  border-radius: 2px;
+}
+.circle-detail-roster-empty { font-size: 13px; }
+/* The .member-circle children of the roster transition smoothly so a
+   member promoted to owner slides from left to right rather than
+   popping. Browsers don't animate DOM reorders for free, so this only
+   helps the hover-lift today — but wiring the transition now keeps the
+   door open for a FLIP animation later without a CSS refactor. */
+.circle-detail-roster .member-circle { transition: transform 220ms ease; }
 .member-circle {
   position: relative;
   display: inline-flex;

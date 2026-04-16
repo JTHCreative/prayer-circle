@@ -557,88 +557,95 @@ export default function Circles() {
                 </>
               )}
               {isExpanded && (
-                <div
-                  className="circle-bubble-content"
-                  onPointerDown={(e) => e.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    className="circle-bubble-close"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelected(null);
-                    }}
-                    aria-label="Close"
-                  >
-                    ×
-                  </button>
-                  <h2 className="circle-bubble-title">{c.name}</h2>
-                  <p className="circle-bubble-meta">
-                    {memberCount} {memberCount === 1 ? 'member' : 'members'}
-                  </p>
-                  {c.description && (
-                    <p className="circle-bubble-desc">{c.description}</p>
+                <>
+                  {panelMembers.length > 0 && (
+                    <div className="circle-bubble-ring" aria-hidden="true">
+                      {panelMembers.slice(0, 12).map((m, i, arr) => (
+                        <div
+                          key={m.id}
+                          className="circle-bubble-ring-item"
+                          style={{ '--angle': `${(i / arr.length) * 360}deg` }}
+                        >
+                          <div className="circle-bubble-ring-counter">
+                            <Avatar user={m} size={34} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                  <div className="circle-bubble-avatars">
-                    {panelMembers.slice(0, 3).map((m) => (
-                      <Avatar key={m.id} user={m} size={36} />
-                    ))}
-                    {memberCount > Math.min(3, panelMembers.length) && (
-                      <span className="circle-bubble-more">
-                        +{memberCount - Math.min(3, panelMembers.length)}
-                      </span>
+                  <div
+                    className="circle-bubble-content"
+                    onPointerDown={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      className="circle-bubble-close"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(null);
+                      }}
+                      aria-label="Close"
+                    >
+                      ×
+                    </button>
+                    <h2 className="circle-bubble-title">{c.name}</h2>
+                    <p className="circle-bubble-meta">
+                      {memberCount} {memberCount === 1 ? 'member' : 'members'}
+                    </p>
+                    {c.description && (
+                      <p className="circle-bubble-desc">{c.description}</p>
                     )}
+                    <div className="circle-bubble-cta">
+                      {isMember ? (
+                        <button
+                          type="button"
+                          className="danger"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleLeave(c);
+                          }}
+                        >
+                          Leave
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleJoin(c);
+                          }}
+                        >
+                          Join
+                        </button>
+                      )}
+                      {isMember && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setInviting(c);
+                          }}
+                        >
+                          Invite
+                        </button>
+                      )}
+                      {c.createdBy === user.uid && (
+                        <button
+                          type="button"
+                          className="circle-bubble-trash"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(c);
+                          }}
+                          aria-label="Delete circle"
+                          title="Delete circle"
+                        >
+                          <TrashIcon size={16} />
+                        </button>
+                      )}
+                    </div>
                   </div>
-                  <div className="circle-bubble-cta">
-                    {isMember ? (
-                      <button
-                        type="button"
-                        className="danger"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleLeave(c);
-                        }}
-                      >
-                        Leave
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleJoin(c);
-                        }}
-                      >
-                        Join
-                      </button>
-                    )}
-                    {isMember && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setInviting(c);
-                        }}
-                      >
-                        Invite
-                      </button>
-                    )}
-                    {c.createdBy === user.uid && (
-                      <button
-                        type="button"
-                        className="circle-bubble-trash"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDelete(c);
-                        }}
-                        aria-label="Delete circle"
-                        title="Delete circle"
-                      >
-                        <TrashIcon size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
+                </>
               )}
             </div>
           );
@@ -1025,28 +1032,33 @@ function CircleDetailPanel({
       )}
 
       <section className="circle-detail-section">
-        <h3>Owner</h3>
-        {owner ? (
-          <MemberCircle user={owner} size={64} />
-        ) : loading ? (
-          <p className="muted">Loading…</p>
-        ) : (
-          <p className="muted">Unknown</p>
-        )}
-      </section>
-
-      <section className="circle-detail-section">
-        <h3>Members</h3>
-        {otherMembers.length === 0 && !loading && (
-          <p className="muted">Just the owner so far.</p>
-        )}
-        {otherMembers.length > 0 && (
-          <div className="circle-members-grid">
-            {otherMembers.map((m) => (
-              <MemberCircle key={m.id} user={m} size={56} />
-            ))}
+        <div className="circle-detail-roster-labels">
+          <span>Members</span>
+          <span>Owner</span>
+        </div>
+        <div className="circle-detail-roster">
+          <div className="circle-detail-roster-side circle-detail-roster-members">
+            {otherMembers.length > 0 ? (
+              otherMembers.map((m) => (
+                <MemberCircle key={m.id} user={m} size={56} />
+              ))
+            ) : (
+              <span className="muted circle-detail-roster-empty">
+                {loading ? 'Loading…' : 'No other members yet'}
+              </span>
+            )}
           </div>
-        )}
+          <div className="circle-detail-roster-divider" aria-hidden="true" />
+          <div className="circle-detail-roster-side circle-detail-roster-owners">
+            {owner ? (
+              <MemberCircle key={owner.id} user={owner} size={56} />
+            ) : (
+              <span className="muted circle-detail-roster-empty">
+                {loading ? 'Loading…' : 'Unknown'}
+              </span>
+            )}
+          </div>
+        </div>
       </section>
 
       <section className="circle-detail-section">
