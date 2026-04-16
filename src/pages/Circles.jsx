@@ -131,7 +131,7 @@ export default function Circles() {
         const psnap = await getDocs(
           query(
             collection(db, 'prayers'),
-            where('circleIds', 'array-contains', selected.id),
+            where('circleIds', 'array-contains-any', [selected.id]),
             orderBy('createdAt', 'desc')
           )
         );

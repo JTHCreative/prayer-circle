@@ -88,23 +88,22 @@ export function BookIcon(props) {
   );
 }
 
-// Praying hands silhouette in solid currentColor — two mirrored teardrop
-// shapes that meet along a 1px gap to read as palms pressed together.
+// Praying hands — uses the native 🙏 emoji so every platform renders the
+// familiar glyph without us hand-rolling an SVG.
 export function PrayIcon({ size = 18, label, className }) {
   return (
-    <svg
+    <span
       className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      stroke="none"
+      style={{
+        fontSize: size,
+        lineHeight: 1,
+        display: 'inline-block'
+      }}
       aria-hidden={label ? undefined : true}
       aria-label={label}
       role={label ? 'img' : 'presentation'}
     >
-      <path d="M11.5 2.5C9.3 2.5 5.5 6.5 5.5 11v5c0 3.3 2.2 5.5 5.5 5.5h.5z" />
-      <path d="M12.5 2.5c2.2 0 6 4 6 8.5v5c0 3.3-2.2 5.5-5.5 5.5h-.5z" />
-    </svg>
+      🙏
+    </span>
   );
 }

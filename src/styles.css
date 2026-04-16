@@ -625,9 +625,9 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   color: var(--muted);
 }
 .circle-members-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
-  gap: 14px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 12px;
 }
 .member-circle {
   position: relative;
@@ -636,6 +636,7 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   justify-content: center;
   border-radius: 999px;
   outline: none;
+  align-self: flex-start;
   transition: transform 0.15s ease;
 }
 .member-circle:hover,
