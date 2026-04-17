@@ -1485,6 +1485,56 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   color: rgba(255, 255, 255, 0.92);
   white-space: pre-wrap;
 }
+.region-prayer-panel__footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+.region-prayer-panel__pray-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #fff;
+  background: rgba(37, 99, 235, 0.18);
+  border: 1px solid rgba(37, 99, 235, 0.55);
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+}
+.region-prayer-panel__pray-btn:hover:not(:disabled),
+.region-prayer-panel__pray-btn:focus-visible {
+  background: rgba(37, 99, 235, 0.32);
+  border-color: rgba(96, 165, 250, 0.8);
+  outline: none;
+}
+.region-prayer-panel__pray-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+.region-prayer-panel__pray-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.region-prayer-panel__pray-btn.is-praying {
+  background: #2563eb;
+  border-color: #2563eb;
+}
+.region-prayer-panel__pray-btn.is-praying:hover,
+.region-prayer-panel__pray-btn.is-praying:focus-visible {
+  background: #1d4ed8;
+  border-color: #1d4ed8;
+}
+.region-prayer-panel__pray-count {
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  border-radius: 999px;
+  padding: 1px 6px;
+  line-height: 1.4;
+}
 
 @media (max-width: 900px) {
   .region-prayer-panel {
