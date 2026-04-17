@@ -491,9 +491,7 @@ export default function Friends() {
                         </span>
                       </span>
                     )}
-                    {isFriend ? (
-                      <span className="pill">Friends</span>
-                    ) : pending ? (
+                    {isFriend ? null : pending ? (
                       <span className="pill">Pending</span>
                     ) : (
                       <button
