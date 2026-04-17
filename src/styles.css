@@ -1966,6 +1966,69 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   font-size: 11px;
 }
 
+/* Sort controls — floated top-left of the network area, mirroring the
+   requests button on the right. */
+.friends-network-sort {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+}
+.friends-network-sort-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin: 0;
+}
+.friends-network-sort-label select {
+  width: auto;
+  padding: 4px 24px 4px 8px;
+  font-size: 12px;
+  border-radius: 999px;
+  border-width: 1px;
+  color: var(--text);
+}
+.friends-network-sort-dir {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+}
+.friends-network-sort-dir:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Drag-and-drop reordering — source is dimmed, valid drop targets get
+   a dashed ring so it reads as a placeholder while hovered. */
+.friends-network-node[draggable='true'] { cursor: grab; }
+.friends-network-node[draggable='true']:active { cursor: grabbing; }
+.friends-network-node.is-dragging { opacity: 0.35; }
+.friends-network-cell.is-drop-target::before {
+  content: '';
+  position: absolute;
+  inset: 4px;
+  border-radius: 999px;
+  border: 2px dashed rgba(79, 70, 229, 0.65);
+  background: rgba(79, 70, 229, 0.08);
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* The circle lattice — centered in the container, fixed cell size so
    circles land exactly on the grid-line intersections drawn by
    .friends-network-lines. */
