@@ -63,15 +63,19 @@ export default function Feed() {
           pushAll(await getDocs(q));
         }
         if ((tab === 'all' || tab === 'circles') && profile.circleIds?.length) {
-          for (const group of chunk(profile.circleIds, 10)) {
-            const q = query(
-              collection(db, 'prayers'),
-              where('circleIds', 'array-contains-any', group),
-              orderBy('createdAt', 'desc'),
-              limit(50)
-            );
-            pushAll(await getDocs(q));
-          }
+          const snaps = await Promise.all(
+            chunk(profile.circleIds, 10).map((group) =>
+              getDocs(
+                query(
+                  collection(db, 'prayers'),
+                  where('circleIds', 'array-contains-any', group),
+                  orderBy('createdAt', 'desc'),
+                  limit(50)
+                )
+              )
+            )
+          );
+          snaps.forEach(pushAll);
         }
         if (tab === 'all' || tab === 'friend') {
           const q = query(

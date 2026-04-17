@@ -6,7 +6,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  documentId,
   getDocs,
   orderBy,
   query,
@@ -22,7 +21,7 @@ import PrayerCard from '../components/PrayerCard.jsx';
 import { PencilIcon, TrashIcon } from '../components/icons.jsx';
 import { CircleIcon, CIRCLE_ICON_KEYS } from '../components/circleIcons.jsx';
 import { togglePraying } from '../utils/prayers.js';
-import { chunk } from '../utils/arrays.js';
+import { fetchByIds } from '../utils/fetch.js';
 import { sendCircleInviteNotification } from '../utils/notifications.js';
 import {
   DEFAULT_GRADIENT_KEY,
@@ -94,18 +93,8 @@ export default function Circles() {
       setPanelLoading(true);
       const memberIds = selected.members || [];
       try {
-        const memberSnaps = await Promise.all(
-          chunk(memberIds, 10).map((group) =>
-            getDocs(
-              query(collection(db, 'users'), where(documentId(), 'in', group))
-            )
-          )
-        );
+        const members = await fetchByIds('users', memberIds);
         if (cancelled) return;
-        const members = [];
-        for (const snap of memberSnaps) {
-          snap.forEach((d) => members.push({ id: d.id, ...d.data() }));
-        }
         // Keep members in the order they appear in the circle so the creator
         // doesn't jump around when more people join.
         const indexById = new Map(memberIds.map((id, i) => [id, i]));
@@ -897,17 +886,7 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
       setLoadingFriends(true);
       try {
         const candidateIds = (friendIds || []).filter((id) => !memberSet.has(id));
-        if (candidateIds.length === 0) {
-          if (!cancelled) setFriends([]);
-          return;
-        }
-        const all = [];
-        for (const group of chunk(candidateIds, 10)) {
-          const snap = await getDocs(
-            query(collection(db, 'users'), where(documentId(), 'in', group))
-          );
-          snap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-        }
+        const all = await fetchByIds('users', candidateIds);
         all.sort((a, b) =>
           (a.displayName || '').localeCompare(b.displayName || '')
         );
