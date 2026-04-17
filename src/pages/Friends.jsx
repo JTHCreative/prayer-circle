@@ -682,6 +682,29 @@ function FriendNode({ user, onSelect, isDragging, onDragStart, onDragEnd }) {
   const bio = user.bio || '';
   const classes = ['friends-network-node'];
   if (isDragging) classes.push('is-dragging');
+
+  // Browsers default to using the <img> child as the drag image, which
+  // renders as a cropped square and loses the gradient-bordered circle
+  // styling. We clone the styled circle element, park it offscreen, set
+  // it as the drag image, then tidy it up on the next frame.
+  function installDragImage(e) {
+    const circle = e.currentTarget.querySelector('.friends-network-circle');
+    if (!circle) return;
+    const clone = circle.cloneNode(true);
+    const rect = circle.getBoundingClientRect();
+    clone.style.position = 'fixed';
+    clone.style.top = '-1000px';
+    clone.style.left = '-1000px';
+    clone.style.width = `${rect.width}px`;
+    clone.style.height = `${rect.height}px`;
+    clone.style.pointerEvents = 'none';
+    document.body.appendChild(clone);
+    const offsetX = e.clientX - rect.left;
+    const offsetY = e.clientY - rect.top;
+    e.dataTransfer.setDragImage(clone, offsetX, offsetY);
+    setTimeout(() => clone.remove(), 0);
+  }
+
   return (
     <div
       className={classes.join(' ')}
@@ -691,6 +714,7 @@ function FriendNode({ user, onSelect, isDragging, onDragStart, onDragEnd }) {
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/friend-uid', user.id);
+        installDragImage(e);
         onDragStart?.();
       }}
       onDragEnd={() => onDragEnd?.()}
