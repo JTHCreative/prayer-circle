@@ -237,6 +237,9 @@ export default function PrayerBook() {
     const colW = CARD_W + 24;
     const rowH = CARD_H + 28;
     const cols = Math.max(1, Math.floor((rect.width - 40) / colW));
+    // Reserve room at the top for the floating toolbar so freshly-seeded
+    // cards don't land underneath it.
+    const startY = 80;
 
     setPositions((prev) => {
       const next = { ...prev };
@@ -245,7 +248,7 @@ export default function PrayerBook() {
       const taken = new Set();
       for (const p of Object.values(next)) {
         const col = Math.round((p.x - 20) / colW);
-        const row = Math.round((p.y - 20) / rowH);
+        const row = Math.round((p.y - startY) / rowH);
         taken.add(`${col},${row}`);
       }
       for (const e of filtered) {
@@ -256,7 +259,7 @@ export default function PrayerBook() {
             const key = `${col},${row}`;
             if (taken.has(key)) continue;
             taken.add(key);
-            next[e.id] = { x: 20 + col * colW, y: 20 + row * rowH };
+            next[e.id] = { x: 20 + col * colW, y: startY + row * rowH };
             placed = true;
           }
         }
@@ -420,37 +423,6 @@ export default function PrayerBook() {
         </div>
       </div>
 
-      <div className="pb-toolbar">
-        <div className="pb-mode-group" role="group" aria-label="Canvas mode">
-          <button
-            type="button"
-            className={`pb-mode${mode === 'move' ? ' active' : ''}`}
-            onClick={() => setMode('move')}
-          >
-            Move
-          </button>
-          <button
-            type="button"
-            className={`pb-mode${mode === 'group' ? ' active' : ''}`}
-            onClick={() => setMode('group')}
-          >
-            + Group area
-          </button>
-        </div>
-        <div className="pb-filter-group" role="group" aria-label="Visibility filter">
-          {VISIBILITY_FILTERS.map((f) => (
-            <button
-              key={f.value}
-              type="button"
-              className={`pb-filter${visibility === f.value ? ' active' : ''}`}
-              onClick={() => setVisibility(f.value)}
-            >
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       <div
         ref={canvasRef}
         className={`pb-canvas mode-${mode}`}
@@ -459,6 +431,37 @@ export default function PrayerBook() {
         onPointerUp={handleCanvasPointerUp}
         onPointerCancel={handleCanvasPointerUp}
       >
+        <div className="pb-toolbar">
+          <div className="pb-mode-group" role="group" aria-label="Canvas mode">
+            <button
+              type="button"
+              className={`pb-mode${mode === 'move' ? ' active' : ''}`}
+              onClick={() => setMode('move')}
+            >
+              Move
+            </button>
+            <button
+              type="button"
+              className={`pb-mode${mode === 'group' ? ' active' : ''}`}
+              onClick={() => setMode('group')}
+            >
+              + Group area
+            </button>
+          </div>
+          <div className="pb-filter-group" role="group" aria-label="Visibility filter">
+            {VISIBILITY_FILTERS.map((f) => (
+              <button
+                key={f.value}
+                type="button"
+                className={`pb-filter${visibility === f.value ? ' active' : ''}`}
+                onClick={() => setVisibility(f.value)}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {loading && (
           <p className="muted center-abs">Loading your prayer book…</p>
         )}
