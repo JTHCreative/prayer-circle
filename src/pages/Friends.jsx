@@ -491,9 +491,7 @@ export default function Friends() {
                         </span>
                       </span>
                     )}
-                    {isFriend ? (
-                      <span className="pill">Friends</span>
-                    ) : pending ? (
+                    {isFriend ? null : pending ? (
                       <span className="pill">Pending</span>
                     ) : (
                       <button
@@ -511,19 +509,7 @@ export default function Friends() {
         </div>
 
         <div className="friends-network-sort">
-          <label className="friends-network-sort-label">
-            Sort
-            <select
-              value={sortMode}
-              onChange={(e) => setSortMode(e.target.value)}
-            >
-              <option value="recent">Recently added</option>
-              <option value="alphabetical">Alphabetical</option>
-              <option value="circle">Circle</option>
-              <option value="location">Location</option>
-              <option value="custom">Custom</option>
-            </select>
-          </label>
+          <SortPicker value={sortMode} onChange={setSortMode} />
           <button
             type="button"
             className="friends-network-sort-dir"
@@ -574,7 +560,6 @@ export default function Friends() {
                         className="friends-request-action-btn"
                         onClick={() => acceptRequest(r.id, r.other.id)}
                         aria-label="Accept"
-                        title="Accept"
                       >
                         <ThumbsUpIcon />
                       </button>
@@ -583,7 +568,6 @@ export default function Friends() {
                         className="friends-request-action-btn danger"
                         onClick={() => declineOrCancel(r.id, r.other?.id)}
                         aria-label="Decline"
-                        title="Decline"
                       >
                         <XIcon />
                       </button>
@@ -1017,6 +1001,169 @@ function InviteToCircleModal({ friend, onClose }) {
         )}
       </div>
     </div>
+  );
+}
+
+const SORT_OPTIONS = [
+  { value: 'recent', label: 'Recently added', icon: ClockIcon },
+  { value: 'alphabetical', label: 'Alphabetical', icon: AlphaIcon },
+  { value: 'circle', label: 'Circle', icon: CircleGroupIcon },
+  { value: 'location', label: 'Location', icon: PinIcon },
+  { value: 'custom', label: 'Custom', icon: SparkleIcon }
+];
+
+function SortPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+  const selected = SORT_OPTIONS.find((o) => o.value === value) || SORT_OPTIONS[0];
+  const SelectedIcon = selected.icon;
+
+  // Close on outside click / Escape so it behaves like a native dropdown.
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e) {
+      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') setOpen(false);
+    }
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  return (
+    <div
+      className={`friends-sort-picker${open ? ' is-open' : ''}`}
+      ref={rootRef}
+    >
+      <button
+        type="button"
+        className="friends-sort-trigger"
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="friends-sort-trigger-label">Sort by</span>
+        <span className="friends-sort-trigger-value">
+          <SelectedIcon />
+          <span>{selected.label}</span>
+        </span>
+        <span className="friends-sort-trigger-caret" aria-hidden="true">
+          ▾
+        </span>
+      </button>
+      <div
+        className="friends-sort-panel"
+        role="listbox"
+        aria-hidden={!open}
+      >
+        {SORT_OPTIONS.map((opt) => {
+          const Icon = opt.icon;
+          const isSelected = opt.value === value;
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              role="option"
+              aria-selected={isSelected}
+              className={`friends-sort-option${
+                isSelected ? ' is-selected' : ''
+              }`}
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              tabIndex={open ? 0 : -1}
+            >
+              <Icon />
+              <span>{opt.label}</span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function ClockIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M12 7.5V12l3 2"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function AlphaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M4 17L7 7l3 10M5 14h4"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M14 7h5l-5 10h5"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function CircleGroupIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="9" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.7" />
+      <circle cx="15" cy="12" r="4.5" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function PinIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 21s6.5-6 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 15 12 21 12 21z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+      />
+      <circle cx="12" cy="10.5" r="2.3" stroke="currentColor" strokeWidth="1.7" />
+    </svg>
+  );
+}
+
+function SparkleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8L12 3z"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M18 16l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 
