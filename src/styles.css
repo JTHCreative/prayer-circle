@@ -1958,12 +1958,24 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .friends-request-card-id .muted { font-size: 11px; }
 .friends-request-card-actions {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  gap: 6px;
 }
-.friends-request-card-actions button {
-  padding: 3px 10px;
-  font-size: 11px;
+.friends-request-action-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+.friends-request-action-btn.danger { color: #dc2626; }
+.friends-request-action-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 /* Sort controls — floated top-left of the network area, mirroring the

@@ -530,16 +530,21 @@ export default function Friends() {
                     <div className="friends-request-card-actions">
                       <button
                         type="button"
+                        className="friends-request-action-btn"
                         onClick={() => acceptRequest(r.id, r.other.id)}
+                        aria-label="Accept"
+                        title="Accept"
                       >
-                        Accept
+                        <ThumbsUpIcon />
                       </button>
                       <button
                         type="button"
-                        className="danger"
+                        className="friends-request-action-btn danger"
                         onClick={() => declineOrCancel(r.id, r.other?.id)}
+                        aria-label="Decline"
+                        title="Decline"
                       >
-                        Decline
+                        <XIcon />
                       </button>
                     </div>
                   </div>
@@ -947,6 +952,33 @@ function PlusIcon() {
         d="M12 5v14M5 12h14"
         stroke="currentColor"
         strokeWidth="2.4"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function ThumbsUpIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M7 10v10H4V10h3zm3 10h7.5a2 2 0 0 0 2-1.6l1.4-7A2 2 0 0 0 19 9h-5l.8-4.2a1.5 1.5 0 0 0-2.7-1.1L7 10v10z"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path
+        d="M6 6l12 12M18 6L6 18"
+        stroke="currentColor"
+        strokeWidth="2.2"
         strokeLinecap="round"
       />
     </svg>
