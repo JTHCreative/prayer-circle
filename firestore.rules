@@ -29,6 +29,13 @@ service cloud.firestore {
         allow read, write: if isSelf(userId);
       }
 
+      // Per-user private settings (e.g. the prayer book canvas layout).
+      // Owner-only so nobody else can see how someone has arranged their
+      // prayers.
+      match /settings/{settingId} {
+        allow read, write: if isSelf(userId);
+      }
+
       // Personal notifications. Any signed-in user can create a
       // notification for another user (e.g. "your circle was deleted"),
       // but only the recipient can read, update, or delete them.
