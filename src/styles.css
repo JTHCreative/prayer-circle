@@ -1960,7 +1960,7 @@ button.friends-network-search-person-btn:hover {
   gap: 8px;
   animation: overlay-pop-in 180ms ease-out;
 }
-.friends-network-requests-panel .muted { text-align: center; padding: 6px; }
+.friends-network-requests-panel > .muted { text-align: center; padding: 6px; }
 .friends-request-card {
   display: flex;
   align-items: center;
