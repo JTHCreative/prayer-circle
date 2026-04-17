@@ -3039,15 +3039,29 @@ button.friends-network-search-person-btn:hover {
 }
 
 .pb-canvas {
+  --pb-dot-x: 0px;
+  --pb-dot-y: 0px;
   position: relative;
   flex: 1;
   min-height: 520px;
   border-radius: 18px;
   overflow: hidden;
-  background:
+  /* Grid-dot layer is drawn on top of the ambient gradients so the pattern
+     is clearly visible; background-position on the first layer tracks the
+     canvas pan so the dots feel glued to the content. */
+  background-color: #eef3ff;
+  background-image:
+    radial-gradient(circle, rgba(99, 102, 241, 0.28) 1.2px, transparent 1.8px),
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
     linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
+  background-size: 22px 22px, auto, auto, auto;
+  background-position:
+    var(--pb-dot-x) var(--pb-dot-y),
+    0 0,
+    0 0,
+    0 0;
+  background-repeat: repeat, no-repeat, no-repeat, no-repeat;
   border: 1px solid var(--border);
   box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
   touch-action: none;
@@ -3055,6 +3069,16 @@ button.friends-network-search-person-btn:hover {
   -webkit-user-select: none;
 }
 .pb-canvas.mode-group { cursor: crosshair; }
+.pb-canvas.mode-move { cursor: grab; }
+.pb-canvas.mode-move.panning { cursor: grabbing; }
+
+/* Content layer holds groups + cards and translates with the viewport so
+   panning in Move mode reveals items placed off-screen. */
+.pb-canvas-content {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
 
 .pb-canvas-hint {
   position: absolute;
@@ -3071,7 +3095,9 @@ button.friends-network-search-person-btn:hover {
   border: 1px solid var(--border);
 }
 
-/* Group region — a soft dashed rectangle with a floating label. */
+/* Group region — a soft dashed rectangle with a floating label. The body
+   itself is grabbable so the whole group (and every card inside it) can be
+   moved together. */
 .pb-group {
   position: absolute;
   left: 0;
@@ -3081,12 +3107,31 @@ button.friends-network-search-person-btn:hover {
   background: rgba(245, 240, 255, 0.5);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   pointer-events: auto;
+  cursor: grab;
+  will-change: transform;
+}
+.pb-canvas.mode-move .pb-group:hover {
+  border-color: rgba(99, 102, 241, 0.7);
+  background: rgba(238, 232, 255, 0.65);
+}
+.pb-group.dragging {
+  cursor: grabbing;
+  z-index: 15;
+  border-style: solid;
+  border-color: rgba(139, 92, 246, 0.7);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 14px 30px rgba(99, 102, 241, 0.22);
 }
 .pb-group-draft {
   border-style: solid;
   border-color: rgba(139, 92, 246, 0.6);
   background: rgba(235, 228, 255, 0.45);
+  cursor: crosshair;
 }
+/* Label is a button so it can both show the group name and open the rename
+   modal on click. Clicks here never start a drag (pointer-down handler
+   early-returns when target is a label). */
 .pb-group-label {
   position: absolute;
   left: 10px;
@@ -3098,6 +3143,18 @@ button.friends-network-search-person-btn:hover {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 999px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  line-height: 1.4;
+  max-width: calc(100% - 40px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pb-group-label:hover {
+  background: var(--primary-soft);
+  color: var(--primary-dark);
+  transform: none;
   box-shadow: var(--shadow);
 }
 .pb-group-remove {
@@ -3116,8 +3173,11 @@ button.friends-network-search-person-btn:hover {
   box-shadow: var(--shadow);
   opacity: 0;
   transition: opacity 140ms ease;
+  cursor: pointer;
 }
 .pb-group:hover .pb-group-remove { opacity: 1; }
+
+.pb-rename-card { max-width: 420px; }
 
 /* Card wrapper owns position + tilt; inner .pb-card is flat so its own
    child animations (Amen burst) aren't double-rotated. */

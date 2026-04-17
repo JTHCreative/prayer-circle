@@ -44,10 +44,6 @@ function tiltFor(id) {
   return raw === 0 ? 1 : raw;
 }
 
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
-
 // Canvas layout lives on the user's profile doc so it follows them across
 // devices. localStorage is kept as a synchronous fallback so the canvas
 // renders with the last-known layout on reload before Firestore answers.
@@ -119,11 +115,19 @@ export default function PrayerBook() {
   const [groups, setGroups] = useState([]);
   // Group rectangle being drawn in "+ Group" mode (in canvas coords).
   const [drawingGroup, setDrawingGroup] = useState(null);
+  // Canvas pan offset — purely ephemeral, not persisted.
+  const [viewport, setViewport] = useState({ x: 0, y: 0 });
+  // When set, shows a modal to rename the group; also holds the draft name.
+  const [renamingGroup, setRenamingGroup] = useState(null);
 
   const canvasRef = useRef(null);
+  const contentRef = useRef(null);
   const cardRefs = useRef({});
+  const groupRefs = useRef({});
   const dragRef = useRef(null); // { id, offsetX, offsetY, moved }
   const drawRef = useRef(null); // { startX, startY }
+  const groupDragRef = useRef(null); // group + attached card drag state
+  const panRef = useRef(null); // canvas pan state
   const togglingRef = useRef(new Set());
   // Blocks the save effect until the initial load has hydrated state —
   // otherwise the first render's empty {positions, groups} would race the
@@ -280,14 +284,17 @@ export default function PrayerBook() {
     const rect = canvas.getBoundingClientRect();
     dragRef.current = {
       id,
-      offsetX: e.clientX - rect.left - pos.x,
-      offsetY: e.clientY - rect.top - pos.y,
+      // Positions live in content space; back out the viewport pan so the
+      // card follows the cursor regardless of how far we've panned.
+      offsetX: e.clientX - rect.left - viewport.x - pos.x,
+      offsetY: e.clientY - rect.top - viewport.y - pos.y,
       moved: false
     };
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {}
     e.currentTarget.classList.add('dragging');
+    e.stopPropagation();
   }
 
   function handleCardPointerMove(e) {
@@ -296,8 +303,10 @@ export default function PrayerBook() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const x = clamp(e.clientX - rect.left - d.offsetX, 0, rect.width - CARD_W);
-    const y = clamp(e.clientY - rect.top - d.offsetY, 0, rect.height - CARD_H);
+    // No bounds clamp: with a pannable canvas a card can sit outside the
+    // visible window and still be reached by panning to it.
+    const x = e.clientX - rect.left - viewport.x - d.offsetX;
+    const y = e.clientY - rect.top - viewport.y - d.offsetY;
     d.moved = true;
     // Mutate DOM directly for smooth drag; commit to state on release.
     const el = cardRefs.current[d.id];
@@ -322,68 +331,220 @@ export default function PrayerBook() {
     dragRef.current = null;
   }
 
-  // --- Group drawing -------------------------------------------------------
+  // --- Group drawing / canvas panning --------------------------------------
 
   function handleCanvasPointerDown(e) {
-    if (mode !== 'group') return;
-    // Only start a draw on the canvas background itself.
-    if (e.target !== e.currentTarget) return;
+    // Only start on empty canvas — not on a card, group, or toolbar child.
+    // The content wrapper (.pb-canvas-content) covers the canvas so a simple
+    // target===currentTarget check is no longer enough; we ask "did this
+    // pointer-down land on any interactive surface?" instead.
+    if (
+      e.target.closest('.pb-card-wrap') ||
+      e.target.closest('.pb-group') ||
+      e.target.closest('.pb-toolbar')
+    ) {
+      return;
+    }
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    drawRef.current = {
-      startX: e.clientX - rect.left,
-      startY: e.clientY - rect.top
-    };
-    setDrawingGroup({
-      x: drawRef.current.startX,
-      y: drawRef.current.startY,
-      w: 0,
-      h: 0
-    });
-    try {
-      e.currentTarget.setPointerCapture(e.pointerId);
-    } catch {}
+    if (mode === 'group') {
+      drawRef.current = {
+        startX: e.clientX - rect.left - viewport.x,
+        startY: e.clientY - rect.top - viewport.y
+      };
+      setDrawingGroup({
+        x: drawRef.current.startX,
+        y: drawRef.current.startY,
+        w: 0,
+        h: 0
+      });
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+    } else if (mode === 'move') {
+      if (e.button !== undefined && e.button !== 0) return;
+      panRef.current = {
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        startVX: viewport.x,
+        startVY: viewport.y,
+        moved: false
+      };
+      try {
+        e.currentTarget.setPointerCapture(e.pointerId);
+      } catch {}
+      e.currentTarget.classList.add('panning');
+    }
   }
 
   function handleCanvasPointerMove(e) {
-    if (mode !== 'group' || !drawRef.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const rect = canvas.getBoundingClientRect();
-    const cx = clamp(e.clientX - rect.left, 0, rect.width);
-    const cy = clamp(e.clientY - rect.top, 0, rect.height);
-    const { startX, startY } = drawRef.current;
-    setDrawingGroup({
-      x: Math.min(startX, cx),
-      y: Math.min(startY, cy),
-      w: Math.abs(cx - startX),
-      h: Math.abs(cy - startY)
-    });
+    if (mode === 'group' && drawRef.current) {
+      const rect = canvas.getBoundingClientRect();
+      const cx = e.clientX - rect.left - viewport.x;
+      const cy = e.clientY - rect.top - viewport.y;
+      const { startX, startY } = drawRef.current;
+      setDrawingGroup({
+        x: Math.min(startX, cx),
+        y: Math.min(startY, cy),
+        w: Math.abs(cx - startX),
+        h: Math.abs(cy - startY)
+      });
+    } else if (mode === 'move' && panRef.current) {
+      const p = panRef.current;
+      const nx = p.startVX + (e.clientX - p.startClientX);
+      const ny = p.startVY + (e.clientY - p.startClientY);
+      p.moved = true;
+      p.lastX = nx;
+      p.lastY = ny;
+      // Mutate DOM directly for smooth pan; commit to state on release so
+      // subsequent mouse-to-canvas math uses the updated viewport.
+      if (contentRef.current) {
+        contentRef.current.style.transform = `translate(${nx}px, ${ny}px)`;
+      }
+      canvas.style.setProperty('--pb-dot-x', `${nx}px`);
+      canvas.style.setProperty('--pb-dot-y', `${ny}px`);
+    }
   }
 
   function handleCanvasPointerUp(e) {
-    if (mode !== 'group' || !drawRef.current) return;
+    const canvas = canvasRef.current;
     try {
       e.currentTarget.releasePointerCapture(e.pointerId);
     } catch {}
-    drawRef.current = null;
-    const rect = drawingGroup;
-    setDrawingGroup(null);
-    if (!rect || rect.w < GROUP_MIN || rect.h < GROUP_MIN) return;
-    const name = (window.prompt('Name this group area', 'Group') || '').trim();
-    if (!name) return;
-    setGroups((prev) => [
-      ...prev,
-      { id: `g_${Date.now()}`, name, ...rect }
-    ]);
-    // Flip back to move mode so the user can immediately start arranging
-    // cards into the fresh region.
-    setMode('move');
+    if (mode === 'group' && drawRef.current) {
+      drawRef.current = null;
+      const rect = drawingGroup;
+      setDrawingGroup(null);
+      if (!rect || rect.w < GROUP_MIN || rect.h < GROUP_MIN) return;
+      const name = (window.prompt('Name this group area', 'Group') || '').trim();
+      if (!name) return;
+      setGroups((prev) => [
+        ...prev,
+        { id: `g_${Date.now()}`, name, ...rect }
+      ]);
+      // Flip back to move mode so the user can immediately start arranging
+      // cards into the fresh region.
+      setMode('move');
+    } else if (mode === 'move' && panRef.current) {
+      const p = panRef.current;
+      if (canvas) canvas.classList.remove('panning');
+      if (p.moved && p.lastX != null) {
+        setViewport({ x: p.lastX, y: p.lastY });
+      }
+      panRef.current = null;
+    }
+  }
+
+  // --- Group drag (moves the region + every card inside it) ---------------
+
+  function cardsInsideGroup(g) {
+    const ids = [];
+    for (const entry of filtered) {
+      const p = positions[entry.id];
+      if (!p) continue;
+      const cx = p.x + CARD_W / 2;
+      const cy = p.y + CARD_H / 2;
+      if (cx >= g.x && cx <= g.x + g.w && cy >= g.y && cy <= g.y + g.h) {
+        ids.push(entry.id);
+      }
+    }
+    return ids;
+  }
+
+  function handleGroupPointerDown(e, g) {
+    if (mode !== 'move') return;
+    if (e.button !== undefined && e.button !== 0) return;
+    // Clicks on interactive children (label = rename, × = remove) have their
+    // own behavior — don't swallow them into a drag.
+    if (e.target.closest('.pb-group-label')) return;
+    if (e.target.closest('button')) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const startPtX = e.clientX - rect.left - viewport.x;
+    const startPtY = e.clientY - rect.top - viewport.y;
+    const contained = cardsInsideGroup(g);
+    const cardStarts = {};
+    for (const id of contained) cardStarts[id] = { ...positions[id] };
+    groupDragRef.current = {
+      id: g.id,
+      startGX: g.x,
+      startGY: g.y,
+      startPtX,
+      startPtY,
+      cardStarts,
+      moved: false
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.add('dragging');
+    e.stopPropagation();
+  }
+
+  function handleGroupPointerMove(e) {
+    const d = groupDragRef.current;
+    if (!d) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ptX = e.clientX - rect.left - viewport.x;
+    const ptY = e.clientY - rect.top - viewport.y;
+    const dx = ptX - d.startPtX;
+    const dy = ptY - d.startPtY;
+    d.moved = true;
+    d.lastDx = dx;
+    d.lastDy = dy;
+    const groupEl = groupRefs.current[d.id];
+    if (groupEl) {
+      groupEl.style.transform = `translate(${d.startGX + dx}px, ${d.startGY + dy}px)`;
+    }
+    for (const [cid, cpos] of Object.entries(d.cardStarts)) {
+      const cel = cardRefs.current[cid];
+      if (cel) {
+        cel.style.transform = `translate(${cpos.x + dx}px, ${cpos.y + dy}px) rotate(var(--pb-tilt))`;
+      }
+    }
+  }
+
+  function handleGroupPointerUp(e) {
+    const d = groupDragRef.current;
+    if (!d) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.remove('dragging');
+    if (d.moved && d.lastDx != null && (d.lastDx !== 0 || d.lastDy !== 0)) {
+      const { lastDx: dx, lastDy: dy, cardStarts, startGX, startGY, id } = d;
+      setGroups((prev) =>
+        prev.map((g) => (g.id === id ? { ...g, x: startGX + dx, y: startGY + dy } : g))
+      );
+      setPositions((prev) => {
+        const next = { ...prev };
+        for (const [cid, cpos] of Object.entries(cardStarts)) {
+          next[cid] = { x: cpos.x + dx, y: cpos.y + dy };
+        }
+        return next;
+      });
+    }
+    groupDragRef.current = null;
   }
 
   function removeGroup(id) {
     setGroups((prev) => prev.filter((g) => g.id !== id));
+  }
+
+  function submitRename() {
+    if (!renamingGroup) return;
+    const name = renamingGroup.name.trim();
+    if (!name) return;
+    setGroups((prev) =>
+      prev.map((g) => (g.id === renamingGroup.id ? { ...g, name } : g))
+    );
+    setRenamingGroup(null);
   }
 
   // --- Unpray (from Amen animation) ---------------------------------------
@@ -426,6 +587,10 @@ export default function PrayerBook() {
       <div
         ref={canvasRef}
         className={`pb-canvas mode-${mode}`}
+        style={{
+          '--pb-dot-x': `${viewport.x}px`,
+          '--pb-dot-y': `${viewport.y}px`
+        }}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
         onPointerUp={handleCanvasPointerUp}
@@ -472,77 +637,145 @@ export default function PrayerBook() {
           </p>
         )}
 
-        {groups.map((g) => (
-          <div
-            key={g.id}
-            className="pb-group"
-            style={{
-              transform: `translate(${g.x}px, ${g.y}px)`,
-              width: g.w,
-              height: g.h
-            }}
-          >
-            <span className="pb-group-label">{g.name}</span>
-            <button
-              type="button"
-              className="pb-group-remove"
-              onClick={() => removeGroup(g.id)}
-              aria-label={`Remove group ${g.name}`}
-              title="Remove group"
-            >
-              ×
-            </button>
-          </div>
-        ))}
-
-        {drawingGroup && (
-          <div
-            className="pb-group pb-group-draft"
-            style={{
-              transform: `translate(${drawingGroup.x}px, ${drawingGroup.y}px)`,
-              width: drawingGroup.w,
-              height: drawingGroup.h
-            }}
-          />
-        )}
-
-        {filtered.map((entry) => {
-          const pos = positions[entry.id];
-          if (!pos) return null;
-          const tilt = tiltFor(entry.id);
-          return (
+        <div
+          ref={contentRef}
+          className="pb-canvas-content"
+          style={{ transform: `translate(${viewport.x}px, ${viewport.y}px)` }}
+        >
+          {groups.map((g) => (
             <div
-              key={entry.id}
+              key={g.id}
               ref={(el) => {
-                if (el) cardRefs.current[entry.id] = el;
-                else delete cardRefs.current[entry.id];
+                if (el) groupRefs.current[g.id] = el;
+                else delete groupRefs.current[g.id];
               }}
-              className="pb-card-wrap"
+              className="pb-group"
               style={{
-                transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
-                '--pb-tilt': `${tilt}deg`
+                transform: `translate(${g.x}px, ${g.y}px)`,
+                width: g.w,
+                height: g.h
               }}
-              onPointerDown={(e) => handleCardPointerDown(e, entry.id)}
-              onPointerMove={handleCardPointerMove}
-              onPointerUp={handleCardPointerUp}
-              onPointerCancel={handleCardPointerUp}
+              onPointerDown={(e) => handleGroupPointerDown(e, g)}
+              onPointerMove={handleGroupPointerMove}
+              onPointerUp={handleGroupPointerUp}
+              onPointerCancel={handleGroupPointerUp}
             >
-              <PrayerBookCard
-                prayer={entry}
-                currentUserId={user.uid}
-                tilt={0}
-                onUnpray={() => handleUnpray(entry)}
-              />
+              <button
+                type="button"
+                className="pb-group-label"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setRenamingGroup({ id: g.id, name: g.name });
+                }}
+                title="Rename group"
+              >
+                {g.name}
+              </button>
+              <button
+                type="button"
+                className="pb-group-remove"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  removeGroup(g.id);
+                }}
+                aria-label={`Remove group ${g.name}`}
+                title="Remove group"
+              >
+                ×
+              </button>
             </div>
-          );
-        })}
+          ))}
+
+          {drawingGroup && (
+            <div
+              className="pb-group pb-group-draft"
+              style={{
+                transform: `translate(${drawingGroup.x}px, ${drawingGroup.y}px)`,
+                width: drawingGroup.w,
+                height: drawingGroup.h
+              }}
+            />
+          )}
+
+          {filtered.map((entry) => {
+            const pos = positions[entry.id];
+            if (!pos) return null;
+            const tilt = tiltFor(entry.id);
+            return (
+              <div
+                key={entry.id}
+                ref={(el) => {
+                  if (el) cardRefs.current[entry.id] = el;
+                  else delete cardRefs.current[entry.id];
+                }}
+                className="pb-card-wrap"
+                style={{
+                  transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
+                  '--pb-tilt': `${tilt}deg`
+                }}
+                onPointerDown={(e) => handleCardPointerDown(e, entry.id)}
+                onPointerMove={handleCardPointerMove}
+                onPointerUp={handleCardPointerUp}
+                onPointerCancel={handleCardPointerUp}
+              >
+                <PrayerBookCard
+                  prayer={entry}
+                  currentUserId={user.uid}
+                  tilt={0}
+                  onUnpray={() => handleUnpray(entry)}
+                />
+              </div>
+            );
+          })}
+        </div>
 
         <div className="pb-canvas-hint" aria-hidden="true">
           {mode === 'group'
             ? 'Drag on empty canvas to draw a group area'
-            : 'Drag cards freely · switch to “+ Group area” to cluster them'}
+            : 'Drag cards · drag a group to move its cards with it · drag empty canvas to pan'}
         </div>
       </div>
+
+      {renamingGroup && (
+        <div className="overlay" onClick={() => setRenamingGroup(null)}>
+          <div
+            className="overlay-card pb-rename-card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              className="overlay-close"
+              onClick={() => setRenamingGroup(null)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+            <h2>Rename group</h2>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                submitRename();
+              }}
+            >
+              <label>
+                Group name
+                <input
+                  autoFocus
+                  value={renamingGroup.name}
+                  onChange={(e) =>
+                    setRenamingGroup((prev) => ({ ...prev, name: e.target.value }))
+                  }
+                />
+              </label>
+              <div className="overlay-actions">
+                <button type="submit" disabled={!renamingGroup.name.trim()}>
+                  Save
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
