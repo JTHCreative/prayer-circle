@@ -1037,18 +1037,16 @@ function SortPicker({ value, onChange, sortDir, onToggleDir, dirDisabled }) {
       ref={rootRef}
     >
       <div className="friends-sort-trigger">
+        <span className="friends-sort-trigger-label">Sort by</span>
         <button
           type="button"
-          className="friends-sort-trigger-main"
+          className="friends-sort-trigger-value-btn"
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span className="friends-sort-trigger-label">Sort by</span>
-          <span className="friends-sort-trigger-value">
-            <SelectedIcon />
-            <span>{selected.label}</span>
-          </span>
+          <SelectedIcon />
+          <span>{selected.label}</span>
           <span className="friends-sort-trigger-caret" aria-hidden="true">
             ▾
           </span>
