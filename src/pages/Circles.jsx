@@ -36,9 +36,9 @@ import {
 // canvas keeps some visual variety even before anyone customizes.
 // Bubble diameters by community size — three tiers so a circle's heft on
 // the canvas tracks how active it is rather than scaling continuously.
-const BUBBLE_SIZE_SMALL = 90;
-const BUBBLE_SIZE_MEDIUM = 130;
-const BUBBLE_SIZE_LARGE = 175;
+const BUBBLE_SIZE_SMALL = 113;
+const BUBBLE_SIZE_MEDIUM = 163;
+const BUBBLE_SIZE_LARGE = 219;
 function bubbleSize(memberCount) {
   const n = memberCount || 1;
   if (n >= 21) return BUBBLE_SIZE_LARGE;
