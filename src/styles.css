@@ -2233,7 +2233,6 @@ button.friends-network-search-person-btn:hover {
     var(--btn-gradient) border-box;
   border: 2.5px solid transparent;
   box-shadow: 0 4px 14px rgba(79, 70, 229, 0.2);
-  overflow: hidden;
   z-index: 1;
   transition: transform 0.18s ease, box-shadow 0.18s ease,
     background 0.18s ease, border-color 0.18s ease;
@@ -2242,16 +2241,17 @@ button.friends-network-search-person-btn:hover {
   border: none;
   box-shadow: none;
 }
-/* First-name ribbon overlaid on the lower half of each circle so
-   faces are easier to place at a glance. Clips to the circle shape
-   via the parent's overflow: hidden. */
+/* First-name pill overlaid on the lower third of each circle so faces
+   are easier to place at a glance. Positioned on top of the circle
+   and allowed to extend slightly past the edges for longer names. */
 .friends-network-node-ribbon {
   position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  padding: 2px 4px;
-  background: rgba(255, 255, 255, 0.94);
+  left: 50%;
+  top: 72%;
+  transform: translate(-50%, -50%);
+  padding: 2px 10px;
+  max-width: 140%;
+  background: #fff;
   color: #334155;
   font-size: 10px;
   font-weight: 600;
@@ -2260,7 +2260,9 @@ button.friends-network-search-person-btn:hover {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  z-index: 2;
+  border-radius: 999px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.22);
+  z-index: 3;
   pointer-events: none;
 }
 /* Custom drag preview that follows the pointer at full opacity, since
