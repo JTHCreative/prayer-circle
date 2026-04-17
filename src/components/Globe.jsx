@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { LOCATION_POINTS } from '../data/locations.js';
+import RegionPrayerPanel from './RegionPrayerPanel.jsx';
 
 // Earth diffuse texture — hosted on jsdelivr (CORS-friendly) from the official
 // three.js repo. If you'd like to self-host, drop a 2048x1024 equirectangular
@@ -34,6 +35,7 @@ export default function Globe() {
   const tooltipRef = useRef(null);
   const tooltipCardRef = useRef(null);
   const [hoveredName, setHoveredName] = useState(null);
+  const [selectedRegion, setSelectedRegion] = useState(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -247,8 +249,38 @@ export default function Globe() {
 
     const handlePointerLeave = () => setHovered(null);
 
+    // Distinguish a click from a drag: remember the pointerdown position, and
+    // only treat pointerup as a click if the pointer barely moved. This keeps
+    // OrbitControls' drag-to-rotate from accidentally triggering a region
+    // selection.
+    let downX = 0;
+    let downY = 0;
+    let downOnCanvas = false;
+    const CLICK_SLOP = 5;
+    const handlePointerDown = (event) => {
+      downX = event.clientX;
+      downY = event.clientY;
+      downOnCanvas = true;
+    };
+    const handlePointerUp = (event) => {
+      if (!downOnCanvas) return;
+      downOnCanvas = false;
+      const dx = event.clientX - downX;
+      const dy = event.clientY - downY;
+      if (dx * dx + dy * dy > CLICK_SLOP * CLICK_SLOP) return;
+      updatePointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      const hits = raycaster.intersectObjects([earth, ...markers], false);
+      if (hits.length && hits[0].object !== earth) {
+        const name = hits[0].object.userData?.name;
+        if (name) setSelectedRegion(name);
+      }
+    };
+
     renderer.domElement.addEventListener('pointermove', handlePointerMove);
     renderer.domElement.addEventListener('pointerleave', handlePointerLeave);
+    renderer.domElement.addEventListener('pointerdown', handlePointerDown);
+    renderer.domElement.addEventListener('pointerup', handlePointerUp);
 
     // --- Animation loop ------------------------------------------------------
     const tmpVec = new THREE.Vector3();
@@ -289,6 +321,8 @@ export default function Globe() {
       ro.disconnect();
       renderer.domElement.removeEventListener('pointermove', handlePointerMove);
       renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
+      renderer.domElement.removeEventListener('pointerdown', handlePointerDown);
+      renderer.domElement.removeEventListener('pointerup', handlePointerUp);
       controls.dispose();
       geometry.dispose();
       if (material.map) material.map.dispose();
@@ -321,6 +355,12 @@ export default function Globe() {
           {hoveredName}
         </div>
       </div>
+      {selectedRegion && (
+        <RegionPrayerPanel
+          region={selectedRegion}
+          onClose={() => setSelectedRegion(null)}
+        />
+      )}
     </div>
   );
 }

@@ -22,7 +22,7 @@ import { CircleIcon } from '../components/circleIcons.jsx';
 import { circleBubbleBackground } from '../utils/circleGradients.js';
 
 const VISIBILITY_OPTIONS = [
-  { key: 'public', label: 'Public', Icon: PublicIcon, helper: 'Anyone on Prayer Circle can see this.' },
+  { key: 'public', label: 'Public', Icon: PublicIcon, helper: 'Shared with your region on the globe.' },
   { key: 'circles', label: 'My Circles', Icon: CircleVisibilityIcon, helper: 'Only the prayer circles you pick.' },
   { key: 'friend', label: 'One Friend', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
 ];
