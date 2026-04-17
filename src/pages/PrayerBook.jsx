@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   collection,
+  deleteField,
   doc,
   getDoc,
   getDocs,
   orderBy,
   query,
+  setDoc,
   updateDoc
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
@@ -76,19 +78,34 @@ function saveLocalLayout(uid, layout) {
   }
 }
 
+// Canvas lives in a private subcollection — only the owner can read it,
+// so one user can't see how another has arranged their book.
+function layoutDocRef(uid) {
+  return doc(db, 'users', uid, 'settings', 'prayerBookCanvas');
+}
+
 async function loadRemoteLayout(uid) {
-  const snap = await getDoc(doc(db, 'users', uid));
-  if (!snap.exists()) return null;
-  const data = snap.data();
-  // Absent field means the user has never saved a canvas yet — caller
-  // should fall back to localStorage rather than clobbering state with
-  // an empty layout.
-  if (!('prayerBookCanvas' in data)) return null;
-  return normalizeLayout(data.prayerBookCanvas);
+  const snap = await getDoc(layoutDocRef(uid));
+  if (snap.exists()) return normalizeLayout(snap.data());
+
+  // Migration: an earlier build stored the layout on the user profile
+  // doc itself, which was readable by any signed-in user. If we find
+  // one, copy it into the private subcollection and strip it off the
+  // profile so it stops leaking.
+  const userSnap = await getDoc(doc(db, 'users', uid));
+  if (userSnap.exists() && 'prayerBookCanvas' in userSnap.data()) {
+    const migrated = normalizeLayout(userSnap.data().prayerBookCanvas);
+    await setDoc(layoutDocRef(uid), migrated);
+    await updateDoc(doc(db, 'users', uid), {
+      prayerBookCanvas: deleteField()
+    });
+    return migrated;
+  }
+  return null;
 }
 
 async function saveRemoteLayout(uid, layout) {
-  await updateDoc(doc(db, 'users', uid), { prayerBookCanvas: layout });
+  await setDoc(layoutDocRef(uid), layout);
 }
 
 export default function PrayerBook() {
