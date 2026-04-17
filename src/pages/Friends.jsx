@@ -47,6 +47,12 @@ export default function Friends() {
   const [friends, setFriends] = useState([]);
   const [incoming, setIncoming] = useState([]);
   const [outgoing, setOutgoing] = useState([]);
+  const [acceptedAtMap, setAcceptedAtMap] = useState({});
+  const [myCircles, setMyCircles] = useState([]);
+  const [sortMode, setSortMode] = useState('recent');
+  const [sortDir, setSortDir] = useState('desc');
+  const [dragUid, setDragUid] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
   const [status, setStatus] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
@@ -129,13 +135,16 @@ export default function Friends() {
 
   async function loadFriendshipData() {
     if (!user) return;
-    const [friendList, { inc, out }] = await Promise.all([
+    const [friendList, { inc, out, acceptedAt }, circleList] = await Promise.all([
       fetchFriendProfiles(profile?.friendIds || []),
-      fetchPendingRequests(user.uid)
+      fetchAllFriendships(user.uid),
+      fetchCirclesByIds(profile?.circleIds || [])
     ]);
     setFriends(friendList);
     setIncoming(inc);
     setOutgoing(out);
+    setAcceptedAtMap(acceptedAt);
+    setMyCircles(circleList);
   }
 
   async function handleSearch(e) {
@@ -266,17 +275,118 @@ export default function Friends() {
     setStatus('');
   }
 
+  const sortedFriends = useMemo(() => {
+    const list = [...friends];
+    // Returns a comparable key for the chosen sort mode. Friends without
+    // a value sort last via the high-codepoint sentinel / -Infinity.
+    function keyOf(u) {
+      if (sortMode === 'recent') {
+        const v = acceptedAtMap[u.id];
+        if (!v) return -Infinity;
+        if (typeof v.seconds === 'number') return v.seconds;
+        if (typeof v.toMillis === 'function') return v.toMillis();
+        return 0;
+      }
+      if (sortMode === 'alphabetical') {
+        return (u.displayName || u.firstName || '\uffff').toLowerCase();
+      }
+      if (sortMode === 'location') {
+        return (u.location || '\uffff').toLowerCase();
+      }
+      if (sortMode === 'circle') {
+        const shared = (u.circleIds || []).filter((id) =>
+          profile?.circleIds?.includes(id)
+        );
+        const names = shared
+          .map((id) => myCircles.find((c) => c.id === id)?.name || '')
+          .filter(Boolean)
+          .map((n) => n.toLowerCase())
+          .sort();
+        return names[0] || '\uffff';
+      }
+      return 0;
+    }
+    list.sort((a, b) => {
+      const ka = keyOf(a);
+      const kb = keyOf(b);
+      if (ka < kb) return -1;
+      if (ka > kb) return 1;
+      return (a.displayName || '').localeCompare(b.displayName || '');
+    });
+    if (sortDir === 'desc') list.reverse();
+    return list;
+  }, [friends, sortMode, sortDir, acceptedAtMap, myCircles, profile?.circleIds]);
+
+  // Map uid -> grid index. In custom mode we honor the saved friendOrder
+  // and pack unmapped friends into the leftover slots; in all other modes
+  // we fill left-to-right in the sorted order.
+  const positions = useMemo(() => {
+    const map = new Map();
+    if (sortMode === 'custom') {
+      const saved = profile?.friendOrder || {};
+      const used = new Set();
+      const unplaced = [];
+      for (const f of sortedFriends) {
+        const pos = saved[f.id];
+        if (typeof pos === 'number' && !used.has(pos)) {
+          map.set(f.id, pos);
+          used.add(pos);
+        } else {
+          unplaced.push(f);
+        }
+      }
+      let slot = 0;
+      for (const f of unplaced) {
+        while (used.has(slot)) slot += 1;
+        map.set(f.id, slot);
+        used.add(slot);
+        slot += 1;
+      }
+    } else {
+      sortedFriends.forEach((f, i) => map.set(f.id, i));
+    }
+    return map;
+  }, [sortMode, sortedFriends, profile?.friendOrder]);
+
   const { cells, rows, innerRows } = useMemo(() => {
+    let maxIdx = -1;
+    positions.forEach((i) => {
+      if (i > maxIdx) maxIdx = i;
+    });
     const rowCount = Math.max(
       GRID_MIN_ROWS,
-      Math.ceil(friends.length / GRID_COLS) || GRID_MIN_ROWS
+      Math.ceil((maxIdx + 1) / GRID_COLS) || GRID_MIN_ROWS
     );
     const total = rowCount * GRID_COLS;
-    const list = Array.from({ length: total }, (_, i) => friends[i] || null);
-    // Pad the scrollable inner area with extra empty lattice rows above
-    // and below the grid so it can be dragged further than the content.
+    const byId = new Map(friends.map((f) => [f.id, f]));
+    const list = Array.from({ length: total }, () => null);
+    positions.forEach((idx, uid) => {
+      if (idx < total) list[idx] = byId.get(uid) || null;
+    });
     return { cells: list, rows: rowCount, innerRows: rowCount + GRID_PAD_ROWS * 2 };
-  }, [friends]);
+  }, [friends, positions]);
+
+  // Drag a friend circle onto another cell. If the target has a friend,
+  // swap; otherwise move. Either way we switch into 'custom' mode and
+  // persist the resulting position map to the user doc.
+  async function handleDropOnCell(targetIdx, draggedUid) {
+    const nextOrder = {};
+    cells.forEach((u, i) => {
+      if (u) nextOrder[u.id] = i;
+    });
+    const sourceIdx = nextOrder[draggedUid];
+    if (sourceIdx === undefined || sourceIdx === targetIdx) return;
+    const targetUser = cells[targetIdx];
+    if (targetUser) {
+      nextOrder[targetUser.id] = sourceIdx;
+    } else {
+      delete nextOrder[draggedUid];
+    }
+    nextOrder[draggedUid] = targetIdx;
+    await updateDoc(doc(db, 'users', user.uid), { friendOrder: nextOrder });
+    setSortMode('custom');
+    await refreshProfile();
+  }
 
   return (
     <div className="circle-universe">
@@ -359,6 +469,34 @@ export default function Friends() {
           )}
         </div>
 
+        <div className="friends-network-sort">
+          <label className="friends-network-sort-label">
+            Sort
+            <select
+              value={sortMode}
+              onChange={(e) => setSortMode(e.target.value)}
+            >
+              <option value="recent">Recently added</option>
+              <option value="alphabetical">Alphabetical</option>
+              <option value="circle">Circle</option>
+              <option value="location">Location</option>
+              <option value="custom">Custom</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="friends-network-sort-dir"
+            onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
+            disabled={sortMode === 'custom'}
+            aria-label={
+              sortDir === 'asc' ? 'Sort ascending' : 'Sort descending'
+            }
+            title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+          >
+            {sortDir === 'asc' ? '↑' : '↓'}
+          </button>
+        </div>
+
         <div className="friends-network-requests">
           <button
             type="button"
@@ -384,10 +522,10 @@ export default function Friends() {
                     <div className="friends-request-card-id">
                       <strong>
                         {r.other?.firstName} {r.other?.lastName}
+                        {r.other?.username && (
+                          <small className="muted"> · @{r.other.username}</small>
+                        )}
                       </strong>
-                      {r.other?.username && (
-                        <span className="muted">@{r.other.username}</span>
-                      )}
                     </div>
                     <div className="friends-request-card-actions">
                       <button
@@ -425,10 +563,45 @@ export default function Friends() {
                 const row = Math.floor(i / GRID_COLS);
                 const classes = ['friends-network-cell'];
                 if (row === 0) classes.push('is-first-row');
+                if (dragOverIdx === i && dragUid && (!u || u.id !== dragUid)) {
+                  classes.push('is-drop-target');
+                }
+                const onDragOver = (e) => {
+                  if (!dragUid) return;
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = 'move';
+                  if (dragOverIdx !== i) setDragOverIdx(i);
+                };
+                const onDragLeave = () => {
+                  if (dragOverIdx === i) setDragOverIdx(null);
+                };
+                const onDrop = (e) => {
+                  e.preventDefault();
+                  const uid =
+                    e.dataTransfer.getData('text/friend-uid') || dragUid;
+                  setDragOverIdx(null);
+                  setDragUid(null);
+                  if (uid) handleDropOnCell(i, uid);
+                };
                 return (
-                  <div key={i} className={classes.join(' ')}>
+                  <div
+                    key={i}
+                    className={classes.join(' ')}
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                  >
                     {u ? (
-                      <FriendNode user={u} onSelect={() => setSelectedFriend(u)} />
+                      <FriendNode
+                        user={u}
+                        onSelect={() => setSelectedFriend(u)}
+                        isDragging={dragUid === u.id}
+                        onDragStart={() => setDragUid(u.id)}
+                        onDragEnd={() => {
+                          setDragUid(null);
+                          setDragOverIdx(null);
+                        }}
+                      />
                     ) : (
                       <button
                         type="button"
@@ -497,16 +670,25 @@ export default function Friends() {
   );
 }
 
-function FriendNode({ user, onSelect }) {
+function FriendNode({ user, onSelect, isDragging, onDragStart, onDragEnd }) {
   const name =
     user.displayName ||
     [user.firstName, user.lastName].filter(Boolean).join(' ');
   const bio = user.bio || '';
+  const classes = ['friends-network-node'];
+  if (isDragging) classes.push('is-dragging');
   return (
     <div
-      className="friends-network-node"
+      className={classes.join(' ')}
       role="button"
       tabIndex={0}
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/friend-uid', user.id);
+        onDragStart?.();
+      }}
+      onDragEnd={() => onDragEnd?.()}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -801,18 +983,23 @@ async function fetchCirclesByIds(circleIds) {
   return out;
 }
 
-// Load pending friendships involving me and hydrate each with the other
-// party's profile in a single batched call, avoiding the N+1 getDoc loop.
-async function fetchPendingRequests(uid) {
+// Load all friendships involving me. Splits into pending incoming/outgoing
+// requests plus an acceptedAt map keyed by the other user's uid so the
+// Friends grid can sort by "recently added".
+async function fetchAllFriendships(uid) {
   const snap = await getDocs(
     query(collection(db, 'friendships'), where('users', 'array-contains', uid))
   );
   const pending = [];
+  const acceptedAt = {};
   snap.forEach((d) => {
     const data = d.data();
-    if (data.status !== 'pending') return;
     const other = data.users.find((u) => u !== uid);
-    pending.push({ id: d.id, other, requestedByMe: data.requestedBy === uid });
+    if (data.status === 'pending') {
+      pending.push({ id: d.id, other, requestedByMe: data.requestedBy === uid });
+    } else if (data.status === 'accepted') {
+      acceptedAt[other] = data.acceptedAt || data.createdAt || null;
+    }
   });
   const profiles = await fetchUserProfiles(pending.map((p) => p.other));
   const byId = new Map(profiles.map((p) => [p.id, p]));
@@ -822,6 +1009,6 @@ async function fetchPendingRequests(uid) {
     const entry = { id: p.id, other: byId.get(p.other) || null };
     (p.requestedByMe ? out : inc).push(entry);
   }
-  return { inc, out };
+  return { inc, out, acceptedAt };
 }
 

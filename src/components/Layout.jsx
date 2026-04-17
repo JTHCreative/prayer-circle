@@ -59,13 +59,14 @@ export default function Layout() {
       <header className="topbar">
         <Link to="/" className="brand">Prayer Circle</Link>
         <nav className="nav">
-          <NavLink to="/new" className="nav-btn">
+          <NavLink to="/new" className="nav-btn nav-btn-primary">
             <IconNewPrayer />
             <span>New Prayer</span>
           </NavLink>
-          <NavLink to="/book" className="nav-btn">
-            <BookIcon className="nav-icon" />
-            <span>Prayer Book</span>
+          <span className="nav-divider" aria-hidden="true" />
+          <NavLink to="/circles" className="nav-btn">
+            <CircleVisibilityIcon className="nav-icon" />
+            <span>Circles</span>
           </NavLink>
           <span className="nav-btn-wrap">
             <NavLink to="/friends" className="nav-btn">
@@ -79,9 +80,9 @@ export default function Layout() {
               />
             )}
           </span>
-          <NavLink to="/circles" className="nav-btn">
-            <CircleVisibilityIcon className="nav-icon" />
-            <span>Circles</span>
+          <NavLink to="/book" className="nav-btn">
+            <BookIcon className="nav-icon" />
+            <span>Prayer Book</span>
           </NavLink>
         </nav>
         <div className="topbar-right">
