@@ -2185,7 +2185,6 @@ button.friends-network-search-person-btn:hover {
    a dashed ring so it reads as a placeholder while hovered. */
 .friends-network-node[draggable='true'] { cursor: grab; }
 .friends-network-node[draggable='true']:active { cursor: grabbing; }
-.friends-network-node.is-dragging { opacity: 0.35; }
 .friends-network-cell.is-drop-target::before {
   content: '';
   position: absolute;
