@@ -21,6 +21,7 @@ export default function Avatar({ user, size = 32 }) {
         className="avatar"
         style={style}
         referrerPolicy="no-referrer"
+        draggable={false}
       />
     );
   }

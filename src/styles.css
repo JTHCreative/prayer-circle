@@ -1885,6 +1885,32 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   padding: 4px 12px;
   font-size: 12px;
 }
+button.friends-network-search-person-btn {
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  min-width: 0;
+  flex: 1;
+  border-radius: 8px;
+}
+button.friends-network-search-person-btn:hover {
+  background: rgba(79, 70, 229, 0.08);
+}
+
+/* Brief pulse on the target friend when scrolled-to from search. */
+@keyframes friendsNetworkHighlight {
+  0% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.55); }
+  60% { box-shadow: 0 0 0 14px rgba(79, 70, 229, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(79, 70, 229, 0); }
+}
+.friends-network-node.is-highlighted .friends-network-circle {
+  animation: friendsNetworkHighlight 1.4s ease-out 2;
+  transform: translateY(-3px);
+}
 
 /* Requests button + expandable panel in the top-right corner. */
 .friends-network-requests {
@@ -1958,12 +1984,24 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .friends-request-card-id .muted { font-size: 11px; }
 .friends-request-card-actions {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  gap: 6px;
 }
-.friends-request-card-actions button {
-  padding: 3px 10px;
-  font-size: 11px;
+.friends-request-action-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #4f46e5;
+}
+.friends-request-action-btn.danger { color: #dc2626; }
+.friends-request-action-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 /* Sort controls — floated top-left of the network area, mirroring the
