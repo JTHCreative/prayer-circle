@@ -653,7 +653,7 @@ export default function Friends() {
         <div className="circle-detail-panel">
           <div className="circle-detail-header">
             <div>
-              <h2>Sent requests</h2>
+              <h2>Sent Requests</h2>
               <p className="muted">Waiting for a response.</p>
             </div>
           </div>
@@ -810,7 +810,7 @@ function AddFriendModal({ onClose, onSend }) {
         >
           ×
         </button>
-        <h2>Add a friend</h2>
+        <h2>Add a Friend</h2>
         <p className="muted">Send a friend request by their username.</p>
         <form onSubmit={submit}>
           <label>
@@ -832,7 +832,7 @@ function AddFriendModal({ onClose, onSend }) {
               Close
             </button>
             <button type="submit" disabled={busy}>
-              {busy ? 'Sending…' : 'Send request'}
+              {busy ? 'Sending…' : 'Send Request'}
             </button>
           </div>
         </form>
@@ -876,10 +876,10 @@ function FriendProfileModal({ friend, onClose, onSendPrayer, onRemove }) {
         {friend.bio && <p className="friend-profile-bio">{friend.bio}</p>}
         <div className="friend-profile-actions">
           <button type="button" onClick={onSendPrayer}>
-            Send prayer request
+            Send Prayer Request
           </button>
           <button type="button" onClick={() => setInvitingToCircle(true)}>
-            Invite to circle
+            Invite to Circle
           </button>
           <button type="button" className="danger" onClick={onRemove}>
             Remove friend
@@ -958,7 +958,7 @@ function InviteToCircleModal({ friend, onClose }) {
         >
           ×
         </button>
-        <h2>Invite {firstName} to a circle</h2>
+        <h2>Invite {firstName} to a Circle</h2>
         <p className="muted">Pick one of your prayer circles.</p>
         {loading ? (
           <p className="muted">Loading circles…</p>

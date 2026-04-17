@@ -120,12 +120,12 @@ export default function Settings() {
   return (
     <div className="stack">
       <div className="card">
-        <h1>Account settings</h1>
+        <h1>Account Settings</h1>
         <p className="muted">Manage your profile, login, and personal details.</p>
       </div>
 
       <div className="card">
-        <h2>Profile picture</h2>
+        <h2>Profile Picture</h2>
         <div className="avatar-row">
           <Avatar user={profile} size={72} />
           <div className="stack-sm">
@@ -135,7 +135,7 @@ export default function Settings() {
                 onClick={() => fileInputRef.current?.click()}
                 disabled={avatarBusy}
               >
-                {profile?.photoURL ? 'Change picture' : 'Upload picture'}
+                {profile?.photoURL ? 'Change Picture' : 'Upload Picture'}
               </button>
               <input
                 ref={fileInputRef}
@@ -167,7 +167,7 @@ export default function Settings() {
       </div>
 
       <div className="card">
-        <h2>Profile details</h2>
+        <h2>Profile Details</h2>
         <form onSubmit={handleProfileSave}>
           <div className="form-row">
             <label>
@@ -216,13 +216,13 @@ export default function Settings() {
           {profileError && <p className="error">{profileError}</p>}
           {profileStatus && <p className="muted">{profileStatus}</p>}
           <button type="submit" disabled={profileBusy}>
-            {profileBusy ? 'Saving…' : 'Save profile'}
+            {profileBusy ? 'Saving…' : 'Save Profile'}
           </button>
         </form>
       </div>
 
       <div className="card">
-        <h2>Change password</h2>
+        <h2>Change Password</h2>
         <form onSubmit={handlePasswordChange}>
           <label>
             Current password
@@ -256,7 +256,7 @@ export default function Settings() {
           {passwordError && <p className="error">{passwordError}</p>}
           {passwordStatus && <p className="muted">{passwordStatus}</p>}
           <button type="submit" disabled={passwordBusy}>
-            {passwordBusy ? 'Updating…' : 'Update password'}
+            {passwordBusy ? 'Updating…' : 'Update Password'}
           </button>
         </form>
       </div>

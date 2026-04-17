@@ -213,7 +213,7 @@ export default function PrayerBook() {
                 value={circleFilter}
                 onChange={(e) => setCircleFilter(e.target.value)}
               >
-                <option value="all">Any circle</option>
+                <option value="all">Any Circle</option>
                 {circleOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
@@ -227,7 +227,7 @@ export default function PrayerBook() {
                 value={friendFilter}
                 onChange={(e) => setFriendFilter(e.target.value)}
               >
-                <option value="all">Any user</option>
+                <option value="all">Any User</option>
                 {friendOptions.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}

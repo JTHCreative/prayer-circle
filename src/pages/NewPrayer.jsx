@@ -160,7 +160,7 @@ export default function NewPrayer() {
             </form>
 
             <div className="new-prayer-card new-prayer-visibility">
-              <h3>Who can see this?</h3>
+              <h3>Who Can See This?</h3>
               <div className="new-prayer-visibility-options">
                 {VISIBILITY_OPTIONS.map(({ key, label, Icon }) => (
                   <button

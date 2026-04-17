@@ -118,7 +118,7 @@ export default function CircleDetail() {
       </div>
 
       <div className="card">
-        <h2>Circle prayers</h2>
+        <h2>Circle Prayers</h2>
         {prayers.length === 0 ? (
           <p className="muted">No prayers shared with this circle yet.</p>
         ) : (

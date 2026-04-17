@@ -86,7 +86,7 @@ export default function AcceptInvite() {
   if (error) {
     return (
       <div className="card">
-        <h1>Invite unavailable</h1>
+        <h1>Invite Unavailable</h1>
         <p className="muted">{error}</p>
         <Link to="/circles">Back to circles</Link>
       </div>
@@ -102,7 +102,7 @@ export default function AcceptInvite() {
         </p>
         <div className="overlay-actions">
           <button type="button" onClick={() => navigate('/circles')}>
-            View circles
+            View Circles
           </button>
         </div>
       </div>
