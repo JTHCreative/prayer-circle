@@ -2973,17 +2973,27 @@ button.friends-network-search-person-btn:hover {
 /* Mirrors .circle-space: same radial glow, same border + inset shadow so
    Friends, Circles, and Prayer Book all feel like the same surface. The
    canvas hosts absolutely-positioned group regions and tilted cards. */
+/* Floats inside the canvas at the top so the interactive window stays the
+   same height as .circle-space / .friends-network — the toolbar doesn't
+   steal vertical real-estate from the canvas itself. */
 .pb-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  z-index: 5;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 8px 14px;
+  padding: 6px 10px;
   border-radius: 999px;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   box-shadow: var(--shadow);
+  pointer-events: auto;
 }
 .pb-mode-group,
 .pb-filter-group {
@@ -3031,7 +3041,7 @@ button.friends-network-search-person-btn:hover {
 .pb-canvas {
   position: relative;
   flex: 1;
-  min-height: 560px;
+  min-height: 520px;
   border-radius: 18px;
   overflow: hidden;
   background:
@@ -3323,6 +3333,3 @@ button.friends-network-search-person-btn:hover {
   to { opacity: 0.15; filter: blur(1px); }
 }
 
-/* A bit more breathing room below the header when the canvas is stacked
-   with the toolbar above it. */
-.circle-universe > .pb-toolbar { margin-top: 4px; }
