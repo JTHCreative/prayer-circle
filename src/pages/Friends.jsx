@@ -736,30 +736,58 @@ function FriendNode({
     user.displayName ||
     [user.firstName, user.lastName].filter(Boolean).join(' ');
   const bio = user.bio || '';
+  const firstName =
+    user.firstName || (user.displayName || '').split(' ')[0] || '';
   const classes = ['friends-network-node'];
   if (isDragging) classes.push('is-dragging');
   if (isHighlighted) classes.push('is-highlighted');
 
-  // Browsers default to using the <img> child as the drag image, which
-  // renders as a cropped square and loses the gradient-bordered circle
-  // styling. We clone the styled circle element, park it offscreen, set
-  // it as the drag image, then tidy it up on the next frame.
-  function installDragImage(e) {
+  const previewRef = useRef(null);
+  const offsetRef = useRef({ x: 0, y: 0 });
+
+  // The native HTML5 drag ghost is always rendered semi-transparent and
+  // doesn't carry our gradient-bordered circle reliably. We swap in a
+  // fully opaque floating clone that tracks the pointer via `drag`
+  // events, and suppress the native ghost with a transparent 1x1 image.
+  function installCustomPreview(e) {
     const circle = e.currentTarget.querySelector('.friends-network-circle');
     if (!circle) return;
-    const clone = circle.cloneNode(true);
     const rect = circle.getBoundingClientRect();
-    clone.style.position = 'fixed';
-    clone.style.top = '-1000px';
-    clone.style.left = '-1000px';
+    const clone = circle.cloneNode(true);
+    clone.classList.add('friends-network-drag-preview');
     clone.style.width = `${rect.width}px`;
     clone.style.height = `${rect.height}px`;
-    clone.style.pointerEvents = 'none';
+    clone.style.left = `${rect.left}px`;
+    clone.style.top = `${rect.top}px`;
     document.body.appendChild(clone);
-    const offsetX = e.clientX - rect.left;
-    const offsetY = e.clientY - rect.top;
-    e.dataTransfer.setDragImage(clone, offsetX, offsetY);
-    setTimeout(() => clone.remove(), 0);
+    previewRef.current = clone;
+    offsetRef.current = {
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top
+    };
+
+    // Transparent 1x1 image to hide the browser's default drag ghost.
+    const empty = document.createElement('canvas');
+    empty.width = 1;
+    empty.height = 1;
+    e.dataTransfer.setDragImage(empty, 0, 0);
+  }
+
+  function movePreview(e) {
+    const preview = previewRef.current;
+    if (!preview) return;
+    // Firefox fires a final `drag` at (0, 0) right before dragend; ignore.
+    if (e.clientX === 0 && e.clientY === 0) return;
+    const { x, y } = offsetRef.current;
+    preview.style.left = `${e.clientX - x}px`;
+    preview.style.top = `${e.clientY - y}px`;
+  }
+
+  function clearPreview() {
+    if (previewRef.current) {
+      previewRef.current.remove();
+      previewRef.current = null;
+    }
   }
 
   return (
@@ -771,10 +799,14 @@ function FriendNode({
       onDragStart={(e) => {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/friend-uid', user.id);
-        installDragImage(e);
+        installCustomPreview(e);
         onDragStart?.();
       }}
-      onDragEnd={() => onDragEnd?.()}
+      onDrag={movePreview}
+      onDragEnd={() => {
+        clearPreview();
+        onDragEnd?.();
+      }}
       onClick={onSelect}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -785,6 +817,11 @@ function FriendNode({
     >
       <div className="friends-network-circle">
         <Avatar user={user} size={60} />
+        {firstName && (
+          <span className="friends-network-node-ribbon" aria-hidden="true">
+            {firstName}
+          </span>
+        )}
       </div>
       <div className="friends-network-card" role="tooltip">
         <div className="friends-network-card-head">
