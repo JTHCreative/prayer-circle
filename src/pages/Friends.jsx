@@ -509,19 +509,15 @@ export default function Friends() {
         </div>
 
         <div className="friends-network-sort">
-          <SortPicker value={sortMode} onChange={setSortMode} />
-          <button
-            type="button"
-            className="friends-network-sort-dir"
-            onClick={() => setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))}
-            disabled={sortMode === 'custom'}
-            aria-label={
-              sortDir === 'asc' ? 'Sort ascending' : 'Sort descending'
+          <SortPicker
+            value={sortMode}
+            onChange={setSortMode}
+            sortDir={sortDir}
+            onToggleDir={() =>
+              setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
             }
-            title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
-          >
-            {sortDir === 'asc' ? '↑' : '↓'}
-          </button>
+            dirDisabled={sortMode === 'custom'}
+          />
         </div>
 
         <div className="friends-network-requests">
@@ -1012,7 +1008,7 @@ const SORT_OPTIONS = [
   { value: 'custom', label: 'Custom', icon: SparkleIcon }
 ];
 
-function SortPicker({ value, onChange }) {
+function SortPicker({ value, onChange, sortDir, onToggleDir, dirDisabled }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const selected = SORT_OPTIONS.find((o) => o.value === value) || SORT_OPTIONS[0];
@@ -1040,22 +1036,37 @@ function SortPicker({ value, onChange }) {
       className={`friends-sort-picker${open ? ' is-open' : ''}`}
       ref={rootRef}
     >
-      <button
-        type="button"
-        className="friends-sort-trigger"
-        onClick={() => setOpen((o) => !o)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-      >
-        <span className="friends-sort-trigger-label">Sort by</span>
-        <span className="friends-sort-trigger-value">
-          <SelectedIcon />
-          <span>{selected.label}</span>
-        </span>
-        <span className="friends-sort-trigger-caret" aria-hidden="true">
-          ▾
-        </span>
-      </button>
+      <div className="friends-sort-trigger">
+        <button
+          type="button"
+          className="friends-sort-trigger-main"
+          onClick={() => setOpen((o) => !o)}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+        >
+          <span className="friends-sort-trigger-label">Sort by</span>
+          <span className="friends-sort-trigger-value">
+            <SelectedIcon />
+            <span>{selected.label}</span>
+          </span>
+          <span className="friends-sort-trigger-caret" aria-hidden="true">
+            ▾
+          </span>
+        </button>
+        <span className="friends-sort-trigger-sep" aria-hidden="true" />
+        <button
+          type="button"
+          className="friends-sort-trigger-dir"
+          onClick={onToggleDir}
+          disabled={dirDisabled}
+          aria-label={
+            sortDir === 'asc' ? 'Sort ascending' : 'Sort descending'
+          }
+          title={sortDir === 'asc' ? 'Ascending' : 'Descending'}
+        >
+          {sortDir === 'asc' ? '↑' : '↓'}
+        </button>
+      </div>
       <div
         className="friends-sort-panel"
         role="listbox"
