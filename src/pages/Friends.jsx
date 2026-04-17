@@ -68,6 +68,8 @@ export default function Friends() {
   // Click-and-drag vertical panning. Any pointerdown on the scroll area
   // that isn't on an interactive element (a friend circle, + button, etc.)
   // starts a grab, and pointermoves translate into scrollTop updates.
+  // When the first row would leave the top of the viewport we apply a
+  // rubber-band: the overshoot is dampened and snaps back on release.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
@@ -76,6 +78,17 @@ export default function Friends() {
     let startScrollTop = 0;
     let startX = 0;
     let pointerId = null;
+    let maxScroll = Infinity;
+
+    // Grid top in scroll-content coordinates. Invariant per layout so
+    // we snapshot it at gesture start.
+    function computeMaxScroll() {
+      const grid = el.querySelector('.friends-network-grid');
+      if (!grid) return Infinity;
+      const gridRect = grid.getBoundingClientRect();
+      const scrollRect = el.getBoundingClientRect();
+      return gridRect.top - scrollRect.top + el.scrollTop;
+    }
 
     function onDown(e) {
       if (e.target.closest('button, a, input, .friends-network-node')) return;
@@ -84,6 +97,7 @@ export default function Friends() {
       startX = e.clientX;
       startScrollTop = el.scrollTop;
       pointerId = e.pointerId;
+      maxScroll = computeMaxScroll();
       el.classList.add('is-grabbing');
     }
     function onMove(e) {
@@ -93,7 +107,13 @@ export default function Friends() {
       // Only hijack once the gesture clearly becomes a drag so short
       // clicks (on empty lattice cells that bubble up) still feel snappy.
       if (Math.abs(dy) + Math.abs(dx) < 4) return;
-      el.scrollTop = startScrollTop - dy;
+      let desired = startScrollTop - dy;
+      if (desired > maxScroll) {
+        // Dampen overshoot so the first row visibly resists the pull
+        // instead of snapping hard against the boundary.
+        desired = maxScroll + (desired - maxScroll) * 0.3;
+      }
+      el.scrollTop = desired;
       if (pointerId != null) {
         try {
           el.setPointerCapture(pointerId);
@@ -105,6 +125,9 @@ export default function Friends() {
     function onUp(e) {
       dragging = false;
       el.classList.remove('is-grabbing');
+      if (el.scrollTop > maxScroll) {
+        el.scrollTo({ top: maxScroll, behavior: 'smooth' });
+      }
       if (pointerId != null) {
         try {
           el.releasePointerCapture(pointerId);
@@ -1037,18 +1060,16 @@ function SortPicker({ value, onChange, sortDir, onToggleDir, dirDisabled }) {
       ref={rootRef}
     >
       <div className="friends-sort-trigger">
+        <span className="friends-sort-trigger-label">Sort by</span>
         <button
           type="button"
-          className="friends-sort-trigger-main"
+          className="friends-sort-trigger-value-btn"
           onClick={() => setOpen((o) => !o)}
           aria-haspopup="listbox"
           aria-expanded={open}
         >
-          <span className="friends-sort-trigger-label">Sort by</span>
-          <span className="friends-sort-trigger-value">
-            <SelectedIcon />
-            <span>{selected.label}</span>
-          </span>
+          <SelectedIcon />
+          <span>{selected.label}</span>
           <span className="friends-sort-trigger-caret" aria-hidden="true">
             ▾
           </span>
