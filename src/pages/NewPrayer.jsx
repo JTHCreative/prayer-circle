@@ -3,16 +3,12 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   addDoc,
   collection,
-  documentId,
-  getDocs,
-  query,
-  serverTimestamp,
-  where
+  serverTimestamp
 } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
-import { chunk } from '../utils/arrays.js';
+import { fetchByIds } from '../utils/fetch.js';
 import {
   CircleVisibilityIcon,
   PersonIcon,
@@ -277,16 +273,3 @@ export default function NewPrayer() {
   );
 }
 
-// Batch fetch docs for a collection given an array of ids. Mirrors the
-// chunked `documentId() in` pattern used in Friends.jsx.
-async function fetchByIds(collectionName, ids) {
-  if (!ids?.length) return [];
-  const snaps = await Promise.all(
-    chunk(ids, 10).map((part) =>
-      getDocs(query(collection(db, collectionName), where(documentId(), 'in', part)))
-    )
-  );
-  const out = [];
-  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
-  return out;
-}

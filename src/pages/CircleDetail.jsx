@@ -4,7 +4,6 @@ import {
   arrayRemove,
   collection,
   doc,
-  documentId,
   getDoc,
   getDocs,
   orderBy,
@@ -15,7 +14,7 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
-import { chunk } from '../utils/arrays.js';
+import { fetchByIds } from '../utils/fetch.js';
 
 export default function CircleDetail() {
   const { circleId } = useParams();
@@ -41,13 +40,7 @@ export default function CircleDetail() {
 
       // Members
       if (c.members?.length) {
-        const all = [];
-        for (const group of chunk(c.members, 10)) {
-          const msnap = await getDocs(
-            query(collection(db, 'users'), where(documentId(), 'in', group))
-          );
-          msnap.forEach((d) => all.push({ id: d.id, ...d.data() }));
-        }
+        const all = await fetchByIds('users', c.members);
         if (!cancelled) setMembers(all);
       }
 

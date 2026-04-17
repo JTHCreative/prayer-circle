@@ -6,7 +6,6 @@ import {
   collection,
   deleteDoc,
   doc,
-  documentId,
   getDoc,
   getDocs,
   query,
@@ -18,7 +17,7 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from '../components/Avatar.jsx';
-import { chunk } from '../utils/arrays.js';
+import { fetchByIds } from '../utils/fetch.js';
 import { sendCircleInviteNotification } from '../utils/notifications.js';
 
 // Friendship doc id is the two uids sorted alphabetically joined by "_".
@@ -1242,31 +1241,15 @@ function XIcon() {
 // Batch-fetch user profiles for a list of uids. Firestore caps
 // `in` queries at 10, so we chunk and run the batches in parallel.
 async function fetchUserProfiles(uids) {
-  if (!uids?.length) return [];
-  const snaps = await Promise.all(
-    chunk(uids, 10).map((part) =>
-      getDocs(query(collection(db, 'users'), where(documentId(), 'in', part)))
-    )
-  );
-  const out = [];
-  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
-  return out;
+  return fetchByIds('users', uids);
 }
 
 async function fetchFriendProfiles(friendIds) {
-  return fetchUserProfiles(friendIds);
+  return fetchByIds('users', friendIds);
 }
 
 async function fetchCirclesByIds(circleIds) {
-  if (!circleIds?.length) return [];
-  const snaps = await Promise.all(
-    chunk(circleIds, 10).map((part) =>
-      getDocs(query(collection(db, 'circles'), where(documentId(), 'in', part)))
-    )
-  );
-  const out = [];
-  snaps.forEach((snap) => snap.forEach((d) => out.push({ id: d.id, ...d.data() })));
-  return out;
+  return fetchByIds('circles', circleIds);
 }
 
 // Load all friendships involving me. Splits into pending incoming/outgoing
