@@ -1067,12 +1067,6 @@ function CircleDetailPanel({
   const owner = members.find((m) => m.id === circle.createdBy);
   const otherMembers = members.filter((m) => m.id !== circle.createdBy);
 
-  // Scroll the panel into view the first time it opens for this circle, so
-  // users on small screens see the new content without hunting for it.
-  useEffect(() => {
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [circle.id]);
-
   function scrollPrayers(direction) {
     const track = trackRef.current;
     if (!track) return;
