@@ -384,10 +384,10 @@ export default function Friends() {
                     <div className="friends-request-card-id">
                       <strong>
                         {r.other?.firstName} {r.other?.lastName}
+                        {r.other?.username && (
+                          <small className="muted"> · @{r.other.username}</small>
+                        )}
                       </strong>
-                      {r.other?.username && (
-                        <span className="muted">@{r.other.username}</span>
-                      )}
                     </div>
                     <div className="friends-request-card-actions">
                       <button
