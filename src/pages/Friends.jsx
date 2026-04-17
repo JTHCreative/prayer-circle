@@ -53,6 +53,7 @@ export default function Friends() {
   const [sortDir, setSortDir] = useState('desc');
   const [dragUid, setDragUid] = useState(null);
   const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [highlightUid, setHighlightUid] = useState(null);
   const [status, setStatus] = useState('');
   const [addOpen, setAddOpen] = useState(false);
   const [requestsOpen, setRequestsOpen] = useState(false);
@@ -275,6 +276,26 @@ export default function Friends() {
     setStatus('');
   }
 
+  // Scroll the friend's circle to the vertical center of the network window
+  // and pulse it briefly so the search → grid jump is easy to follow.
+  function scrollToFriend(uid) {
+    const scroll = scrollRef.current;
+    if (!scroll) return;
+    const cell = scroll.querySelector(
+      `[data-friend-uid="${CSS.escape(uid)}"]`
+    );
+    if (!cell) return;
+    const scrollRect = scroll.getBoundingClientRect();
+    const cellRect = cell.getBoundingClientRect();
+    const delta =
+      cellRect.top - scrollRect.top - (scrollRect.height - cellRect.height) / 2;
+    scroll.scrollTo({ top: scroll.scrollTop + delta, behavior: 'smooth' });
+    setHighlightUid(uid);
+    setTimeout(() => {
+      setHighlightUid((curr) => (curr === uid ? null : curr));
+    }, 1600);
+  }
+
   const sortedFriends = useMemo(() => {
     const list = [...friends];
     // Returns a comparable key for the chosen sort mode. Friends without
@@ -438,18 +459,38 @@ export default function Friends() {
                   incoming.some((i) => i.other?.id === u.id);
                 return (
                   <div key={u.id} className="friends-network-search-row">
-                    <span className="person">
-                      <Avatar user={u} size={32} />
-                      <span>
-                        {u.displayName}
-                        {u.username && (
-                          <small className="muted"> · @{u.username}</small>
-                        )}
-                        {u.location && (
-                          <small className="muted"> · 📍 {u.location}</small>
-                        )}
+                    {isFriend ? (
+                      <button
+                        type="button"
+                        className="person friends-network-search-person-btn"
+                        onClick={() => scrollToFriend(u.id)}
+                        title="Find on grid"
+                      >
+                        <Avatar user={u} size={32} />
+                        <span>
+                          {u.displayName}
+                          {u.username && (
+                            <small className="muted"> · @{u.username}</small>
+                          )}
+                          {u.location && (
+                            <small className="muted"> · 📍 {u.location}</small>
+                          )}
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="person">
+                        <Avatar user={u} size={32} />
+                        <span>
+                          {u.displayName}
+                          {u.username && (
+                            <small className="muted"> · @{u.username}</small>
+                          )}
+                          {u.location && (
+                            <small className="muted"> · 📍 {u.location}</small>
+                          )}
+                        </span>
                       </span>
-                    </span>
+                    )}
                     {isFriend ? (
                       <span className="pill">Friends</span>
                     ) : pending ? (
@@ -592,6 +633,7 @@ export default function Friends() {
                   <div
                     key={i}
                     className={classes.join(' ')}
+                    data-friend-uid={u?.id}
                     onDragOver={onDragOver}
                     onDragLeave={onDragLeave}
                     onDrop={onDrop}
@@ -601,6 +643,7 @@ export default function Friends() {
                         user={u}
                         onSelect={() => setSelectedFriend(u)}
                         isDragging={dragUid === u.id}
+                        isHighlighted={highlightUid === u.id}
                         onDragStart={() => setDragUid(u.id)}
                         onDragEnd={() => {
                           setDragUid(null);
@@ -675,13 +718,21 @@ export default function Friends() {
   );
 }
 
-function FriendNode({ user, onSelect, isDragging, onDragStart, onDragEnd }) {
+function FriendNode({
+  user,
+  onSelect,
+  isDragging,
+  isHighlighted,
+  onDragStart,
+  onDragEnd
+}) {
   const name =
     user.displayName ||
     [user.firstName, user.lastName].filter(Boolean).join(' ');
   const bio = user.bio || '';
   const classes = ['friends-network-node'];
   if (isDragging) classes.push('is-dragging');
+  if (isHighlighted) classes.push('is-highlighted');
 
   // Browsers default to using the <img> child as the drag image, which
   // renders as a cropped square and loses the gradient-bordered circle
