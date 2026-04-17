@@ -188,6 +188,28 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   background: var(--btn-gradient);
   filter: brightness(1.05);
 }
+.nav-btn-primary {
+  color: #fff;
+  background: var(--btn-gradient);
+  border-color: transparent;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.26);
+}
+.nav-btn-primary:hover {
+  color: #fff;
+  background: var(--btn-gradient);
+  filter: brightness(1.05);
+}
+.nav-btn-primary.active,
+.nav-btn-primary.active:hover {
+  background: var(--btn-gradient-danger);
+  box-shadow: 0 0 8px rgba(249, 115, 22, 0.32);
+}
+.nav-divider {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: var(--border, rgba(0, 0, 0, 0.08));
+}
 .nav-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
 .container { max-width: 760px; margin: 0 auto; padding: 24px; width: 100%; }
