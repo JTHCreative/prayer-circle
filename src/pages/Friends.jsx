@@ -574,7 +574,6 @@ export default function Friends() {
                         className="friends-request-action-btn"
                         onClick={() => acceptRequest(r.id, r.other.id)}
                         aria-label="Accept"
-                        title="Accept"
                       >
                         <ThumbsUpIcon />
                       </button>
@@ -583,7 +582,6 @@ export default function Friends() {
                         className="friends-request-action-btn danger"
                         onClick={() => declineOrCancel(r.id, r.other?.id)}
                         aria-label="Decline"
-                        title="Decline"
                       >
                         <XIcon />
                       </button>

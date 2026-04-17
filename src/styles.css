@@ -1988,6 +1988,7 @@ button.friends-network-search-person-btn:hover {
   gap: 6px;
 }
 .friends-request-action-btn {
+  position: relative;
   width: 32px;
   height: 32px;
   padding: 0;
@@ -2002,6 +2003,32 @@ button.friends-network-search-person-btn:hover {
   width: 16px;
   height: 16px;
   display: block;
+}
+/* Tooltip label slides in above the button on hover — reads `aria-label`
+   so the text stays in sync with the button's accessible name. */
+.friends-request-action-btn::after {
+  content: attr(aria-label);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #1f2937;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  z-index: 2;
+}
+.friends-request-action-btn:hover::after,
+.friends-request-action-btn:focus-visible::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
 /* Sort controls — floated top-left of the network area, mirroring the
