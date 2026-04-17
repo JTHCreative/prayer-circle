@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  orderBy,
+  query,
+  updateDoc
+} from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import PrayerBookCard from '../components/PrayerBookCard.jsx';
@@ -38,27 +46,49 @@ function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-// localStorage is fine for canvas layout — it's UI state, not shared data,
-// and drag-persisting to Firestore would fire a write every pointerup.
-function loadLayout(uid) {
+// Canvas layout lives on the user's profile doc so it follows them across
+// devices. localStorage is kept as a synchronous fallback so the canvas
+// renders with the last-known layout on reload before Firestore answers.
+const EMPTY_LAYOUT = { positions: {}, groups: [] };
+
+function normalizeLayout(raw) {
+  if (!raw || typeof raw !== 'object') return EMPTY_LAYOUT;
+  return {
+    positions: raw.positions && typeof raw.positions === 'object' ? raw.positions : {},
+    groups: Array.isArray(raw.groups) ? raw.groups : []
+  };
+}
+
+function loadLocalLayout(uid) {
   try {
     const raw = localStorage.getItem(`pb:canvas:${uid}`);
-    if (!raw) return { positions: {}, groups: [] };
-    const parsed = JSON.parse(raw);
-    return {
-      positions: parsed.positions || {},
-      groups: Array.isArray(parsed.groups) ? parsed.groups : []
-    };
+    if (!raw) return EMPTY_LAYOUT;
+    return normalizeLayout(JSON.parse(raw));
   } catch {
-    return { positions: {}, groups: [] };
+    return EMPTY_LAYOUT;
   }
 }
-function saveLayout(uid, layout) {
+function saveLocalLayout(uid, layout) {
   try {
     localStorage.setItem(`pb:canvas:${uid}`, JSON.stringify(layout));
   } catch {
-    // storage full / disabled — canvas still works in-memory
+    // storage full / disabled — Firestore still has the canonical copy
   }
+}
+
+async function loadRemoteLayout(uid) {
+  const snap = await getDoc(doc(db, 'users', uid));
+  if (!snap.exists()) return null;
+  const data = snap.data();
+  // Absent field means the user has never saved a canvas yet — caller
+  // should fall back to localStorage rather than clobbering state with
+  // an empty layout.
+  if (!('prayerBookCanvas' in data)) return null;
+  return normalizeLayout(data.prayerBookCanvas);
+}
+
+async function saveRemoteLayout(uid, layout) {
+  await updateDoc(doc(db, 'users', uid), { prayerBookCanvas: layout });
 }
 
 export default function PrayerBook() {
@@ -78,6 +108,11 @@ export default function PrayerBook() {
   const dragRef = useRef(null); // { id, offsetX, offsetY, moved }
   const drawRef = useRef(null); // { startX, startY }
   const togglingRef = useRef(new Set());
+  // Blocks the save effect until the initial load has hydrated state —
+  // otherwise the first render's empty {positions, groups} would race the
+  // remote fetch and overwrite the user's saved layout with nothing.
+  const layoutReadyRef = useRef(false);
+  const saveTimerRef = useRef(null);
 
   // Load the user's prayer book entries once per user, same source as the
   // old list view: the users/{uid}/prayerBook subcollection.
@@ -105,18 +140,65 @@ export default function PrayerBook() {
     };
   }, [user?.uid]);
 
-  // Rehydrate canvas layout whenever the user changes.
+  // Rehydrate canvas layout whenever the user changes. Paints localStorage
+  // immediately so the canvas doesn't flash empty, then reconciles with
+  // Firestore once it answers (Firestore wins — it's the source of truth).
   useEffect(() => {
     if (!user?.uid) return;
-    const saved = loadLayout(user.uid);
-    setPositions(saved.positions);
-    setGroups(saved.groups);
+    let cancelled = false;
+    layoutReadyRef.current = false;
+    const local = loadLocalLayout(user.uid);
+    setPositions(local.positions);
+    setGroups(local.groups);
+
+    (async () => {
+      try {
+        const remote = await loadRemoteLayout(user.uid);
+        if (cancelled) return;
+        if (remote) {
+          setPositions(remote.positions);
+          setGroups(remote.groups);
+          saveLocalLayout(user.uid, remote);
+        } else if (
+          Object.keys(local.positions).length > 0 ||
+          local.groups.length > 0
+        ) {
+          // User has a local layout but nothing on Firestore yet — seed
+          // Firestore from local so their next device inherits it.
+          await saveRemoteLayout(user.uid, local);
+        }
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to load prayer book layout', err);
+      } finally {
+        if (!cancelled) layoutReadyRef.current = true;
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [user?.uid]);
 
-  // Persist layout (debounced via microtask) when positions/groups change.
+  // Persist layout. localStorage write is synchronous so reloads are
+  // instant; Firestore write is debounced so a drag commits once at rest
+  // instead of on every micro-state change.
   useEffect(() => {
-    if (!user?.uid) return;
-    saveLayout(user.uid, { positions, groups });
+    if (!user?.uid || !layoutReadyRef.current) return;
+    const layout = { positions, groups };
+    saveLocalLayout(user.uid, layout);
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveRemoteLayout(user.uid, layout).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to save prayer book layout', err);
+      });
+    }, 600);
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    };
   }, [user?.uid, positions, groups]);
 
   const filtered = useMemo(() => {
