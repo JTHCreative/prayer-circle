@@ -1,39 +1,86 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { collection, getDocs, orderBy, query } from 'firebase/firestore';
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
-import PrayerCard from '../components/PrayerCard.jsx';
+import PrayerBookCard from '../components/PrayerBookCard.jsx';
 import { togglePraying } from '../utils/prayers.js';
 
-// Filter options for the visibility dropdown
-const VISIBILITY_OPTIONS = [
+// Card footprint in the canvas. Used for auto-placement of new cards and
+// for the "is this card inside a group" hit-test.
+const CARD_W = 240;
+const CARD_H = 150;
+// Minimum size a dragged-out group must have to be kept.
+const GROUP_MIN = 80;
+
+const VISIBILITY_FILTERS = [
   { value: 'all', label: 'All' },
   { value: 'public', label: 'Public' },
-  { value: 'circles', label: 'Circle' },
+  { value: 'circles', label: 'Circles' },
   { value: 'friend', label: 'Private' }
 ];
 
-const SORT_OPTIONS = [
-  { value: 'addedDesc', label: 'Recently added' },
-  { value: 'addedAsc', label: 'Oldest added' },
-  { value: 'createdDesc', label: 'Newest prayer' },
-  { value: 'createdAsc', label: 'Oldest prayer' }
-];
+// Deterministic "random-feeling" number from a string so each card's tilt
+// stays stable across renders without storing it in state.
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = (h * 31 + str.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+function tiltFor(id) {
+  // -2 .. +2 degrees, skipping 0 so every card looks "placed".
+  const raw = (hashSeed(id) % 5) - 2;
+  return raw === 0 ? 1 : raw;
+}
+
+function clamp(v, lo, hi) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
+// localStorage is fine for canvas layout — it's UI state, not shared data,
+// and drag-persisting to Firestore would fire a write every pointerup.
+function loadLayout(uid) {
+  try {
+    const raw = localStorage.getItem(`pb:canvas:${uid}`);
+    if (!raw) return { positions: {}, groups: [] };
+    const parsed = JSON.parse(raw);
+    return {
+      positions: parsed.positions || {},
+      groups: Array.isArray(parsed.groups) ? parsed.groups : []
+    };
+  } catch {
+    return { positions: {}, groups: [] };
+  }
+}
+function saveLayout(uid, layout) {
+  try {
+    localStorage.setItem(`pb:canvas:${uid}`, JSON.stringify(layout));
+  } catch {
+    // storage full / disabled — canvas still works in-memory
+  }
+}
 
 export default function PrayerBook() {
   const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [mode, setMode] = useState('move'); // 'move' | 'group'
+  const [visibility, setVisibility] = useState('all');
+
+  const [positions, setPositions] = useState({});
+  const [groups, setGroups] = useState([]);
+  // Group rectangle being drawn in "+ Group" mode (in canvas coords).
+  const [drawingGroup, setDrawingGroup] = useState(null);
+
+  const canvasRef = useRef(null);
+  const cardRefs = useRef({});
+  const dragRef = useRef(null); // { id, offsetX, offsetY, moved }
+  const drawRef = useRef(null); // { startX, startY }
   const togglingRef = useRef(new Set());
 
-  // Filter state
-  const [visibility, setVisibility] = useState('all');
-  const [circleFilter, setCircleFilter] = useState('all');
-  const [friendFilter, setFriendFilter] = useState('all');
-  const [sort, setSort] = useState('addedDesc');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
+  // Load the user's prayer book entries once per user, same source as the
+  // old list view: the users/{uid}/prayerBook subcollection.
   useEffect(() => {
     let cancelled = false;
     async function load() {
@@ -56,233 +103,344 @@ export default function PrayerBook() {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [user?.uid]);
 
-  // Derive circle & friend filter options from what's actually in the book.
-  const circleOptions = useMemo(() => {
-    const map = new Map();
-    for (const e of entries) {
-      if (e.visibility !== 'circles') continue;
-      (e.circleIds || []).forEach((id, i) => {
-        if (!map.has(id)) map.set(id, (e.circleNames || [])[i] || 'Circle');
-      });
-    }
-    return Array.from(map, ([value, label]) => ({ value, label })).sort(
-      (a, b) => a.label.localeCompare(b.label)
-    );
-  }, [entries]);
+  // Rehydrate canvas layout whenever the user changes.
+  useEffect(() => {
+    if (!user?.uid) return;
+    const saved = loadLayout(user.uid);
+    setPositions(saved.positions);
+    setGroups(saved.groups);
+  }, [user?.uid]);
 
-  const friendOptions = useMemo(() => {
-    const map = new Map();
-    for (const e of entries) {
-      if (e.visibility !== 'friend') continue;
-      // Whichever side of the private thread isn't me
-      const otherId = e.targetUserId === user.uid ? e.authorId : e.targetUserId;
-      const otherHandle =
-        e.targetUserId === user.uid ? e.authorUsername : e.targetUsername;
-      const otherName =
-        e.targetUserId === user.uid ? e.authorName : e.targetName;
-      if (otherId && !map.has(otherId)) {
-        map.set(otherId, otherHandle ? `@${otherHandle}` : otherName || 'User');
-      }
-    }
-    return Array.from(map, ([value, label]) => ({ value, label })).sort(
-      (a, b) => a.label.localeCompare(b.label)
-    );
-  }, [entries, user.uid]);
+  // Persist layout (debounced via microtask) when positions/groups change.
+  useEffect(() => {
+    if (!user?.uid) return;
+    saveLayout(user.uid, { positions, groups });
+  }, [user?.uid, positions, groups]);
 
   const filtered = useMemo(() => {
-    let list = entries;
+    if (visibility === 'all') return entries;
+    return entries.filter((e) => e.visibility === visibility);
+  }, [entries, visibility]);
 
-    if (visibility !== 'all') list = list.filter((e) => e.visibility === visibility);
-    if (visibility === 'circles' && circleFilter !== 'all') {
-      list = list.filter((e) => (e.circleIds || []).includes(circleFilter));
-    }
-    if (visibility === 'friend' && friendFilter !== 'all') {
-      list = list.filter((e) => {
-        const otherId = e.targetUserId === user.uid ? e.authorId : e.targetUserId;
-        return otherId === friendFilter;
-      });
-    }
-    if (startDate) {
-      const start = new Date(startDate);
-      list = list.filter((e) => {
-        const d = e.createdAt?.toDate?.();
-        return !d || d >= start;
-      });
-    }
-    if (endDate) {
-      const end = new Date(endDate + 'T23:59:59');
-      list = list.filter((e) => {
-        const d = e.createdAt?.toDate?.();
-        return !d || d <= end;
-      });
-    }
+  // Seed a sensible position for any card we haven't placed yet. Walks a
+  // simple grid inside the canvas and picks the first slot that doesn't
+  // already have a card on it.
+  useEffect(() => {
+    if (filtered.length === 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const needsSeeding = filtered.some((e) => !positions[e.id]);
+    if (!needsSeeding) return;
 
-    list = [...list].sort((a, b) => {
-      const ta = a.addedAt?.toMillis?.() ?? 0;
-      const tb = b.addedAt?.toMillis?.() ?? 0;
-      const ca = a.createdAt?.toMillis?.() ?? 0;
-      const cb = b.createdAt?.toMillis?.() ?? 0;
-      switch (sort) {
-        case 'addedAsc': return ta - tb;
-        case 'createdDesc': return cb - ca;
-        case 'createdAsc': return ca - cb;
-        default: return tb - ta; // addedDesc
+    const colW = CARD_W + 24;
+    const rowH = CARD_H + 28;
+    const cols = Math.max(1, Math.floor((rect.width - 40) / colW));
+
+    setPositions((prev) => {
+      const next = { ...prev };
+      // Taken slots from already-placed cards so fresh ones slot between
+      // them rather than landing on top.
+      const taken = new Set();
+      for (const p of Object.values(next)) {
+        const col = Math.round((p.x - 20) / colW);
+        const row = Math.round((p.y - 20) / rowH);
+        taken.add(`${col},${row}`);
       }
+      for (const e of filtered) {
+        if (next[e.id]) continue;
+        let placed = false;
+        for (let row = 0; row < 200 && !placed; row++) {
+          for (let col = 0; col < cols && !placed; col++) {
+            const key = `${col},${row}`;
+            if (taken.has(key)) continue;
+            taken.add(key);
+            next[e.id] = { x: 20 + col * colW, y: 20 + row * rowH };
+            placed = true;
+          }
+        }
+      }
+      return next;
     });
+  }, [filtered, positions]);
 
-    return list;
-  }, [entries, visibility, circleFilter, friendFilter, startDate, endDate, sort, user.uid]);
+  // --- Card drag -----------------------------------------------------------
 
-  async function handleUnpray(entry) {
-    // All entries here are ones the user is praying for, so this always
-    // removes from the book. Guard against rapid re-clicks — togglePraying
-    // reads prayedBy to decide direction, so a second in-flight call with
-    // the same stale snapshot would try to un-pray again and miscount.
-    if (togglingRef.current.has(entry.id)) return;
-    togglingRef.current.add(entry.id);
-    // Drop the row optimistically so the UI reflects the tap immediately.
-    setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+  function handleCardPointerDown(e, id) {
+    if (mode !== 'move') return;
+    if (e.button !== undefined && e.button !== 0) return;
+    if (e.target.closest('button')) return; // let the Prayed button click
+    const canvas = canvasRef.current;
+    const pos = positions[id];
+    if (!canvas || !pos) return;
+    const rect = canvas.getBoundingClientRect();
+    dragRef.current = {
+      id,
+      offsetX: e.clientX - rect.left - pos.x,
+      offsetY: e.clientY - rect.top - pos.y,
+      moved: false
+    };
     try {
-      await togglePraying(user, entry);
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error('Failed to remove prayer from book', err);
-    } finally {
-      togglingRef.current.delete(entry.id);
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.add('dragging');
+  }
+
+  function handleCardPointerMove(e) {
+    const d = dragRef.current;
+    if (!d || d.id == null) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const x = clamp(e.clientX - rect.left - d.offsetX, 0, rect.width - CARD_W);
+    const y = clamp(e.clientY - rect.top - d.offsetY, 0, rect.height - CARD_H);
+    d.moved = true;
+    // Mutate DOM directly for smooth drag; commit to state on release.
+    const el = cardRefs.current[d.id];
+    if (el) el.style.transform = `translate(${x}px, ${y}px) rotate(var(--pb-tilt))`;
+    d.lastX = x;
+    d.lastY = y;
+  }
+
+  function handleCardPointerUp(e) {
+    const d = dragRef.current;
+    if (!d) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    e.currentTarget.classList.remove('dragging');
+    if (d.moved && d.lastX != null) {
+      setPositions((prev) => ({
+        ...prev,
+        [d.id]: { x: d.lastX, y: d.lastY }
+      }));
     }
+    dragRef.current = null;
   }
 
-  function resetFilters() {
-    setVisibility('all');
-    setCircleFilter('all');
-    setFriendFilter('all');
-    setStartDate('');
-    setEndDate('');
-    setSort('addedDesc');
+  // --- Group drawing -------------------------------------------------------
+
+  function handleCanvasPointerDown(e) {
+    if (mode !== 'group') return;
+    // Only start a draw on the canvas background itself.
+    if (e.target !== e.currentTarget) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    drawRef.current = {
+      startX: e.clientX - rect.left,
+      startY: e.clientY - rect.top
+    };
+    setDrawingGroup({
+      x: drawRef.current.startX,
+      y: drawRef.current.startY,
+      w: 0,
+      h: 0
+    });
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
   }
 
-  const hasAnyFilter =
-    visibility !== 'all' ||
-    circleFilter !== 'all' ||
-    friendFilter !== 'all' ||
-    startDate ||
-    endDate ||
-    sort !== 'addedDesc';
+  function handleCanvasPointerMove(e) {
+    if (mode !== 'group' || !drawRef.current) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const cx = clamp(e.clientX - rect.left, 0, rect.width);
+    const cy = clamp(e.clientY - rect.top, 0, rect.height);
+    const { startX, startY } = drawRef.current;
+    setDrawingGroup({
+      x: Math.min(startX, cx),
+      y: Math.min(startY, cy),
+      w: Math.abs(cx - startX),
+      h: Math.abs(cy - startY)
+    });
+  }
+
+  function handleCanvasPointerUp(e) {
+    if (mode !== 'group' || !drawRef.current) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    drawRef.current = null;
+    const rect = drawingGroup;
+    setDrawingGroup(null);
+    if (!rect || rect.w < GROUP_MIN || rect.h < GROUP_MIN) return;
+    const name = (window.prompt('Name this group area', 'Group') || '').trim();
+    if (!name) return;
+    setGroups((prev) => [
+      ...prev,
+      { id: `g_${Date.now()}`, name, ...rect }
+    ]);
+    // Flip back to move mode so the user can immediately start arranging
+    // cards into the fresh region.
+    setMode('move');
+  }
+
+  function removeGroup(id) {
+    setGroups((prev) => prev.filter((g) => g.id !== id));
+  }
+
+  // --- Unpray (from Amen animation) ---------------------------------------
+
+  const handleUnpray = useCallback(
+    async (entry) => {
+      if (togglingRef.current.has(entry.id)) return;
+      togglingRef.current.add(entry.id);
+      setEntries((prev) => prev.filter((e) => e.id !== entry.id));
+      setPositions((prev) => {
+        const next = { ...prev };
+        delete next[entry.id];
+        return next;
+      });
+      try {
+        await togglePraying(user, entry);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error('Failed to remove prayer from book', err);
+      } finally {
+        togglingRef.current.delete(entry.id);
+      }
+    },
+    [user]
+  );
 
   return (
-    <div className="stack">
-      <div className="card">
-        <h1>Prayer Book</h1>
-        <p className="muted">
-          Every prayer you&rsquo;ve tapped <strong>Pray</strong> for lands
-          here. Click <strong>Praying</strong> on a card to remove it.
-        </p>
-      </div>
-
-      <div className="card">
-        <div className="filters-row">
-          <label className="filter">
-            <span>Sort</span>
-            <select value={sort} onChange={(e) => setSort(e.target.value)}>
-              {SORT_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </label>
-          <label className="filter">
-            <span>Visibility</span>
-            <select
-              value={visibility}
-              onChange={(e) => {
-                setVisibility(e.target.value);
-                setCircleFilter('all');
-                setFriendFilter('all');
-              }}
-            >
-              {VISIBILITY_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>{o.label}</option>
-              ))}
-            </select>
-          </label>
-          {visibility === 'circles' && (
-            <label className="filter">
-              <span>Circle</span>
-              <select
-                value={circleFilter}
-                onChange={(e) => setCircleFilter(e.target.value)}
-              >
-                <option value="all">Any Circle</option>
-                {circleOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
-          {visibility === 'friend' && (
-            <label className="filter">
-              <span>User</span>
-              <select
-                value={friendFilter}
-                onChange={(e) => setFriendFilter(e.target.value)}
-              >
-                <option value="all">Any User</option>
-                {friendOptions.map((o) => (
-                  <option key={o.value} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
-          <label className="filter">
-            <span>From</span>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-          </label>
-          <label className="filter">
-            <span>To</span>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
-          </label>
-          {hasAnyFilter && (
-            <button type="button" onClick={resetFilters} className="filter-reset">
-              Reset
-            </button>
-          )}
-        </div>
-      </div>
-
-      {loading ? (
-        <p className="muted">Loading your prayer book…</p>
-      ) : entries.length === 0 ? (
-        <div className="card">
+    <div className="circle-universe">
+      <div className="circle-universe-header">
+        <div>
+          <h1>Prayer Book</h1>
           <p className="muted">
-            Your prayer book is empty. Tap <strong>Pray</strong> on any prayer
-            in the feed to add it here.
+            Every prayer you&rsquo;re praying for, laid out like a table.
+            Drag to arrange, draw a group to cluster them, and tap{' '}
+            <strong>Prayed</strong> when you&rsquo;re done.
           </p>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="card">
-          <p className="muted">No prayers match the current filters.</p>
+      </div>
+
+      <div className="pb-toolbar">
+        <div className="pb-mode-group" role="group" aria-label="Canvas mode">
+          <button
+            type="button"
+            className={`pb-mode${mode === 'move' ? ' active' : ''}`}
+            onClick={() => setMode('move')}
+          >
+            Move
+          </button>
+          <button
+            type="button"
+            className={`pb-mode${mode === 'group' ? ' active' : ''}`}
+            onClick={() => setMode('group')}
+          >
+            + Group area
+          </button>
         </div>
-      ) : (
-        <div className="prayer-list">
-          {filtered.map((entry) => (
-            <PrayerCard
-              key={entry.id}
-              prayer={entry}
-              currentUserId={user.uid}
-              onPray={() => handleUnpray(entry)}
-            />
+        <div className="pb-filter-group" role="group" aria-label="Visibility filter">
+          {VISIBILITY_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              className={`pb-filter${visibility === f.value ? ' active' : ''}`}
+              onClick={() => setVisibility(f.value)}
+            >
+              {f.label}
+            </button>
           ))}
         </div>
-      )}
+      </div>
+
+      <div
+        ref={canvasRef}
+        className={`pb-canvas mode-${mode}`}
+        onPointerDown={handleCanvasPointerDown}
+        onPointerMove={handleCanvasPointerMove}
+        onPointerUp={handleCanvasPointerUp}
+        onPointerCancel={handleCanvasPointerUp}
+      >
+        {loading && (
+          <p className="muted center-abs">Loading your prayer book…</p>
+        )}
+        {!loading && entries.length === 0 && (
+          <p className="muted center-abs">
+            Your prayer book is empty. Tap <strong>Pray</strong> on any
+            prayer in the feed to add it here.
+          </p>
+        )}
+
+        {groups.map((g) => (
+          <div
+            key={g.id}
+            className="pb-group"
+            style={{
+              transform: `translate(${g.x}px, ${g.y}px)`,
+              width: g.w,
+              height: g.h
+            }}
+          >
+            <span className="pb-group-label">{g.name}</span>
+            <button
+              type="button"
+              className="pb-group-remove"
+              onClick={() => removeGroup(g.id)}
+              aria-label={`Remove group ${g.name}`}
+              title="Remove group"
+            >
+              ×
+            </button>
+          </div>
+        ))}
+
+        {drawingGroup && (
+          <div
+            className="pb-group pb-group-draft"
+            style={{
+              transform: `translate(${drawingGroup.x}px, ${drawingGroup.y}px)`,
+              width: drawingGroup.w,
+              height: drawingGroup.h
+            }}
+          />
+        )}
+
+        {filtered.map((entry) => {
+          const pos = positions[entry.id];
+          if (!pos) return null;
+          const tilt = tiltFor(entry.id);
+          return (
+            <div
+              key={entry.id}
+              ref={(el) => {
+                if (el) cardRefs.current[entry.id] = el;
+                else delete cardRefs.current[entry.id];
+              }}
+              className="pb-card-wrap"
+              style={{
+                transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
+                '--pb-tilt': `${tilt}deg`
+              }}
+              onPointerDown={(e) => handleCardPointerDown(e, entry.id)}
+              onPointerMove={handleCardPointerMove}
+              onPointerUp={handleCardPointerUp}
+              onPointerCancel={handleCardPointerUp}
+            >
+              <PrayerBookCard
+                prayer={entry}
+                currentUserId={user.uid}
+                tilt={0}
+                onUnpray={() => handleUnpray(entry)}
+              />
+            </div>
+          );
+        })}
+
+        <div className="pb-canvas-hint" aria-hidden="true">
+          {mode === 'group'
+            ? 'Drag on empty canvas to draw a group area'
+            : 'Drag cards freely · switch to “+ Group area” to cluster them'}
+        </div>
+      </div>
     </div>
   );
 }
