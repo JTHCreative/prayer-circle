@@ -1,6 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { LOCATION_POINTS } from '../data/locations.js';
 
 // Earth diffuse texture — hosted on jsdelivr (CORS-friendly) from the official
 // three.js repo. If you'd like to self-host, drop a 2048x1024 equirectangular
@@ -8,10 +9,31 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 const EARTH_TEXTURE_URL =
   'https://cdn.jsdelivr.net/gh/mrdoob/three.js@r160/examples/textures/planets/earth_atmos_2048.jpg';
 
+const EARTH_RADIUS = 1;
+const MARKER_SURFACE_RADIUS = 1.008; // sit just above the surface
+const MARKER_SIZE = 0.013;
+const MARKER_COLOR = 0x2563eb; // matches --primary theme blue
+
+// Convert geographic lat/lng (degrees) to a 3D point on a sphere of the given
+// radius, oriented to match three.js' default SphereGeometry UVs + the
+// standard equirectangular earth texture.
+function latLngToVec3(lat, lng, radius) {
+  const phi = ((90 - lat) * Math.PI) / 180;
+  const theta = ((lng + 180) * Math.PI) / 180;
+  return new THREE.Vector3(
+    -radius * Math.sin(phi) * Math.cos(theta),
+    radius * Math.cos(phi),
+    radius * Math.sin(phi) * Math.sin(theta)
+  );
+}
+
 // A draggable, slowly auto-rotating 3D Earth built directly on three.js.
 // The canvas fills its container; the container should set a size + background.
 export default function Globe() {
   const mountRef = useRef(null);
+  const tooltipRef = useRef(null);
+  const tooltipCardRef = useRef(null);
+  const [hoveredName, setHoveredName] = useState(null);
 
   useEffect(() => {
     const mount = mountRef.current;
@@ -57,7 +79,7 @@ export default function Globe() {
     scene.add(rimLight);
 
     // --- Earth mesh ----------------------------------------------------------
-    const geometry = new THREE.SphereGeometry(1, 64, 64);
+    const geometry = new THREE.SphereGeometry(EARTH_RADIUS, 64, 64);
     const material = new THREE.MeshPhongMaterial({
       color: 0xb8c6da, // fallback while the texture loads
       shininess: 8,
@@ -130,6 +152,45 @@ export default function Globe() {
       }
     );
 
+    // --- Location markers ----------------------------------------------------
+    // Small blue spheres placed on the earth's surface for each selectable
+    // location. Parented to the earth so they inherit the axial tilt and any
+    // future earth-level rotation.
+    const markersGroup = new THREE.Group();
+    earth.add(markersGroup);
+
+    const markerGeometry = new THREE.SphereGeometry(MARKER_SIZE, 16, 16);
+    const markerMaterial = new THREE.MeshBasicMaterial({ color: MARKER_COLOR });
+    const haloMaterial = new THREE.MeshBasicMaterial({
+      color: MARKER_COLOR,
+      transparent: true,
+      opacity: 0.32,
+      side: THREE.DoubleSide,
+      depthWrite: false
+    });
+    const haloGeometry = new THREE.RingGeometry(
+      MARKER_SIZE * 1.6,
+      MARKER_SIZE * 2.6,
+      24
+    );
+
+    const markers = LOCATION_POINTS.map((loc) => {
+      const surfacePos = latLngToVec3(loc.lat, loc.lng, MARKER_SURFACE_RADIUS);
+      const mesh = new THREE.Mesh(markerGeometry, markerMaterial);
+      mesh.position.copy(surfacePos);
+      mesh.userData = { name: loc.name };
+      markersGroup.add(mesh);
+
+      // Flat halo ring tangent to the surface, slightly above so it doesn't
+      // z-fight with the earth.
+      const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+      halo.position.copy(surfacePos).multiplyScalar(1.002);
+      halo.lookAt(surfacePos.clone().multiplyScalar(2));
+      markersGroup.add(halo);
+
+      return mesh;
+    });
+
     // --- Controls ------------------------------------------------------------
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -151,12 +212,63 @@ export default function Globe() {
       controls.autoRotate = true;
     });
 
+    // --- Hover detection -----------------------------------------------------
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    let hovered = null;
+
+    const updatePointer = (event) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const setHovered = (next) => {
+      if (next === hovered) return;
+      if (hovered) hovered.scale.setScalar(1);
+      hovered = next;
+      if (hovered) hovered.scale.setScalar(1.8);
+      setHoveredName(hovered ? hovered.userData.name : null);
+      renderer.domElement.style.cursor = hovered ? 'pointer' : '';
+    };
+
+    const handlePointerMove = (event) => {
+      updatePointer(event);
+      raycaster.setFromCamera(pointer, camera);
+      // Include the earth so a marker on the far side (occluded by the planet)
+      // doesn't trigger — the earth intersection will come first.
+      const hits = raycaster.intersectObjects([earth, ...markers], false);
+      if (hits.length && hits[0].object !== earth) {
+        setHovered(hits[0].object);
+      } else {
+        setHovered(null);
+      }
+    };
+
+    const handlePointerLeave = () => setHovered(null);
+
+    renderer.domElement.addEventListener('pointermove', handlePointerMove);
+    renderer.domElement.addEventListener('pointerleave', handlePointerLeave);
+
     // --- Animation loop ------------------------------------------------------
+    const tmpVec = new THREE.Vector3();
     let rafId = 0;
     const animate = () => {
       rafId = requestAnimationFrame(animate);
       controls.update();
       renderer.render(scene, camera);
+
+      // Keep the tooltip pinned to the hovered marker as the globe spins or
+      // the user drags. Writing transform directly on a ref (not through React
+      // state) avoids a re-render every frame.
+      if (hovered && tooltipRef.current) {
+        hovered.getWorldPosition(tmpVec);
+        tmpVec.project(camera);
+        const rect = renderer.domElement.getBoundingClientRect();
+        const x = (tmpVec.x * 0.5 + 0.5) * rect.width;
+        const y = (-tmpVec.y * 0.5 + 0.5) * rect.height;
+        tooltipRef.current.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+      }
     };
     animate();
 
@@ -175,12 +287,18 @@ export default function Globe() {
     return () => {
       cancelAnimationFrame(rafId);
       ro.disconnect();
+      renderer.domElement.removeEventListener('pointermove', handlePointerMove);
+      renderer.domElement.removeEventListener('pointerleave', handlePointerLeave);
       controls.dispose();
       geometry.dispose();
       if (material.map) material.map.dispose();
       material.dispose();
       atmosphereGeometry.dispose();
       atmosphereMaterial.dispose();
+      markerGeometry.dispose();
+      markerMaterial.dispose();
+      haloGeometry.dispose();
+      haloMaterial.dispose();
       renderer.dispose();
       if (renderer.domElement.parentNode === mount) {
         mount.removeChild(renderer.domElement);
@@ -188,5 +306,21 @@ export default function Globe() {
     };
   }, []);
 
-  return <div ref={mountRef} className="globe-canvas" aria-label="3D globe of Earth" />;
+  return (
+    <div ref={mountRef} className="globe-canvas" aria-label="3D globe of Earth">
+      <div
+        ref={tooltipRef}
+        className="globe-marker-tooltip"
+        role="tooltip"
+        aria-hidden={!hoveredName}
+      >
+        <div
+          ref={tooltipCardRef}
+          className={`globe-marker-tooltip__card${hoveredName ? ' visible' : ''}`}
+        >
+          {hoveredName}
+        </div>
+      </div>
+    </div>
+  );
 }
