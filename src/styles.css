@@ -2039,43 +2039,129 @@ button.friends-network-search-person-btn:hover {
   left: 18px;
   z-index: 6;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
-  padding: 5px 8px;
+}
+.friends-network-sort-dir {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 999px;
+  font-size: 14px;
+  line-height: 1;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+}
+.friends-network-sort-dir:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Custom pill-based sort picker. The trigger shows the current choice
+   as a "Sort by <value>" pill; clicking it reveals the option pills. */
+.friends-sort-picker {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.friends-sort-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(6px);
   border: 1px solid var(--border);
   border-radius: 999px;
   box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text);
+  cursor: pointer;
 }
-.friends-network-sort-label {
+.friends-sort-trigger:hover { filter: brightness(0.98); }
+.friends-sort-trigger-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+.friends-sort-trigger-value {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--muted);
-  margin: 0;
-}
-.friends-network-sort-label select {
-  width: auto;
-  padding: 4px 24px 4px 8px;
-  font-size: 12px;
-  border-radius: 999px;
-  border-width: 1px;
+  font-weight: 600;
   color: var(--text);
 }
-.friends-network-sort-dir {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border-radius: 999px;
-  font-size: 14px;
-  line-height: 1;
+.friends-sort-trigger-value svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
 }
-.friends-network-sort-dir:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
+.friends-sort-trigger-caret {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s ease;
+}
+.friends-sort-picker.is-open .friends-sort-trigger-caret {
+  transform: rotate(180deg);
+}
+
+.friends-sort-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.14);
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  min-width: 180px;
+}
+.friends-sort-picker.is-open .friends-sort-panel {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.friends-sort-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--btn-text);
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(var(--btn-fill), var(--btn-fill)) padding-box,
+    var(--btn-gradient) border-box;
+  cursor: pointer;
+  text-align: left;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.friends-sort-option svg {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+.friends-sort-option:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--btn-glow);
+}
+.friends-sort-option.is-selected {
+  color: #fff;
+  background: var(--btn-gradient);
+  border-color: transparent;
+  box-shadow: 0 0 8px rgba(139, 92, 246, 0.26);
+}
+.friends-sort-option.is-selected:hover {
+  background: var(--btn-gradient);
+  filter: brightness(1.05);
 }
 
 /* Drag-and-drop reordering — source is dimmed, valid drop targets get
