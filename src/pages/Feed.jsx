@@ -167,7 +167,7 @@ export default function Feed() {
           <div className="feed-header">
             <h1>Prayer Feed</h1>
             <div className="feed-header-actions">
-              <Link to="/new" className="btn-primary">+ New prayer</Link>
+              <Link to="/new" className="btn-primary">+ New Prayer</Link>
             </div>
           </div>
           <div className="tabs">

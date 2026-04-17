@@ -36,9 +36,9 @@ import {
 // canvas keeps some visual variety even before anyone customizes.
 // Bubble diameters by community size — three tiers so a circle's heft on
 // the canvas tracks how active it is rather than scaling continuously.
-const BUBBLE_SIZE_SMALL = 90;
-const BUBBLE_SIZE_MEDIUM = 130;
-const BUBBLE_SIZE_LARGE = 175;
+const BUBBLE_SIZE_SMALL = 113;
+const BUBBLE_SIZE_MEDIUM = 163;
+const BUBBLE_SIZE_LARGE = 219;
 function bubbleSize(memberCount) {
   const n = memberCount || 1;
   if (n >= 21) return BUBBLE_SIZE_LARGE;
@@ -539,7 +539,7 @@ export default function Circles() {
           </p>
         </div>
         <button type="button" onClick={() => setCreating(true)}>
-          + New circle
+          + New Circle
         </button>
       </div>
 
@@ -814,7 +814,7 @@ function CircleEditorModal({ mode = 'create', initialValues, onCancel, onSubmit 
         >
           ×
         </button>
-        <h2>{isEdit ? 'Edit prayer circle' : 'Create a prayer circle'}</h2>
+        <h2>{isEdit ? 'Edit Prayer Circle' : 'Create a Prayer Circle'}</h2>
         <form onSubmit={handleSubmit}>
           <label>
             Name
@@ -867,7 +867,7 @@ function CircleEditorModal({ mode = 'create', initialValues, onCancel, onSubmit 
           {error && <p className="error">{error}</p>}
           <div className="overlay-actions">
             <button type="submit" disabled={busy}>
-              {busy ? (isEdit ? 'Saving…' : 'Creating…') : isEdit ? 'Save changes' : 'Create circle'}
+              {busy ? (isEdit ? 'Saving…' : 'Creating…') : isEdit ? 'Save Changes' : 'Create Circle'}
             </button>
           </div>
         </form>
@@ -1026,14 +1026,14 @@ function InviteModal({ circle, inviter, currentUserId, friendIds, onClose }) {
         </section>
 
         <section className="invite-section">
-          <h3>Invite link</h3>
+          <h3>Invite Link</h3>
           {!inviteUrl ? (
             <button
               type="button"
               onClick={handleGenerateLink}
               disabled={generating}
             >
-              {generating ? 'Generating…' : 'Generate link'}
+              {generating ? 'Generating…' : 'Generate Link'}
             </button>
           ) : (
             <div className="invite-link-row">
@@ -1066,12 +1066,6 @@ function CircleDetailPanel({
   const dragRef = useRef({ active: false, startX: 0, startScroll: 0, moved: false });
   const owner = members.find((m) => m.id === circle.createdBy);
   const otherMembers = members.filter((m) => m.id !== circle.createdBy);
-
-  // Scroll the panel into view the first time it opens for this circle, so
-  // users on small screens see the new content without hunting for it.
-  useEffect(() => {
-    panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [circle.id]);
 
   function scrollPrayers(direction) {
     const track = trackRef.current;
@@ -1188,7 +1182,7 @@ function CircleDetailPanel({
       </section>
 
       <section className="circle-detail-section">
-        <h3>Prayer requests</h3>
+        <h3>Prayer Requests</h3>
         {loading && !hasPrayers ? (
           <p className="muted">Loading prayers…</p>
         ) : (
