@@ -120,3 +120,127 @@ export const LOCATIONS = [
   'Melbourne',
   'Auckland'
 ];
+
+// Approximate lat/lng for each of the locations above. Used by the 3D globe
+// to drop a marker at each selectable location. Coordinates point at the
+// city/metro center and are intentionally approximate — the globe is a
+// general visualization, not a mapping surface.
+export const LOCATION_POINTS = [
+  // North America
+  { name: 'San Francisco Bay Area', lat: 37.7749, lng: -122.4194 },
+  { name: 'Los Angeles', lat: 34.0522, lng: -118.2437 },
+  { name: 'Seattle', lat: 47.6062, lng: -122.3321 },
+  { name: 'Portland', lat: 45.5152, lng: -122.6784 },
+  { name: 'Denver', lat: 39.7392, lng: -104.9903 },
+  { name: 'Phoenix', lat: 33.4484, lng: -112.074 },
+  { name: 'Las Vegas', lat: 36.1699, lng: -115.1398 },
+  { name: 'Chicago', lat: 41.8781, lng: -87.6298 },
+  { name: 'Dallas-Fort Worth', lat: 32.7767, lng: -96.797 },
+  { name: 'Houston', lat: 29.7604, lng: -95.3698 },
+  { name: 'Austin', lat: 30.2672, lng: -97.7431 },
+  { name: 'Atlanta', lat: 33.749, lng: -84.388 },
+  { name: 'Miami', lat: 25.7617, lng: -80.1918 },
+  { name: 'Washington D.C.', lat: 38.9072, lng: -77.0369 },
+  { name: 'New York City', lat: 40.7128, lng: -74.006 },
+  { name: 'Boston', lat: 42.3601, lng: -71.0589 },
+  { name: 'Toronto', lat: 43.6532, lng: -79.3832 },
+  { name: 'Vancouver', lat: 49.2827, lng: -123.1207 },
+  { name: 'Montreal', lat: 45.5017, lng: -73.5673 },
+  { name: 'Mexico City', lat: 19.4326, lng: -99.1332 },
+
+  // Latin America
+  { name: 'Guatemala City', lat: 14.6349, lng: -90.5069 },
+  { name: 'Panama City', lat: 8.9824, lng: -79.5199 },
+  { name: 'Bogotá', lat: 4.711, lng: -74.0721 },
+  { name: 'Quito', lat: -0.1807, lng: -78.4678 },
+  { name: 'Lima', lat: -12.0464, lng: -77.0428 },
+  { name: 'Santiago', lat: -33.4489, lng: -70.6693 },
+  { name: 'Buenos Aires', lat: -34.6037, lng: -58.3816 },
+  { name: 'São Paulo', lat: -23.5558, lng: -46.6396 },
+  { name: 'Rio de Janeiro', lat: -22.9068, lng: -43.1729 },
+
+  // Europe
+  { name: 'Dublin', lat: 53.3498, lng: -6.2603 },
+  { name: 'London', lat: 51.5074, lng: -0.1278 },
+  { name: 'Manchester', lat: 53.4808, lng: -2.2426 },
+  { name: 'Paris', lat: 48.8566, lng: 2.3522 },
+  { name: 'Amsterdam', lat: 52.3676, lng: 4.9041 },
+  { name: 'Brussels', lat: 50.8503, lng: 4.3517 },
+  { name: 'Berlin', lat: 52.52, lng: 13.405 },
+  { name: 'Munich', lat: 48.1351, lng: 11.582 },
+  { name: 'Frankfurt', lat: 50.1109, lng: 8.6821 },
+  { name: 'Zurich', lat: 47.3769, lng: 8.5417 },
+  { name: 'Vienna', lat: 48.2082, lng: 16.3738 },
+  { name: 'Prague', lat: 50.0755, lng: 14.4378 },
+  { name: 'Warsaw', lat: 52.2297, lng: 21.0122 },
+  { name: 'Budapest', lat: 47.4979, lng: 19.0402 },
+  { name: 'Copenhagen', lat: 55.6761, lng: 12.5683 },
+  { name: 'Stockholm', lat: 59.3293, lng: 18.0686 },
+  { name: 'Oslo', lat: 59.9139, lng: 10.7522 },
+  { name: 'Helsinki', lat: 60.1699, lng: 24.9384 },
+  { name: 'Rome', lat: 41.9028, lng: 12.4964 },
+  { name: 'Milan', lat: 45.4642, lng: 9.19 },
+  { name: 'Madrid', lat: 40.4168, lng: -3.7038 },
+  { name: 'Barcelona', lat: 41.3851, lng: 2.1734 },
+  { name: 'Lisbon', lat: 38.7223, lng: -9.1393 },
+  { name: 'Athens', lat: 37.9838, lng: 23.7275 },
+  { name: 'Istanbul', lat: 41.0082, lng: 28.9784 },
+  { name: 'Moscow', lat: 55.7558, lng: 37.6173 },
+  { name: 'Kyiv', lat: 50.4501, lng: 30.5234 },
+
+  // Middle East & North Africa
+  { name: 'Cairo', lat: 30.0444, lng: 31.2357 },
+  { name: 'Tel Aviv', lat: 32.0853, lng: 34.7818 },
+  { name: 'Beirut', lat: 33.8938, lng: 35.5018 },
+  { name: 'Amman', lat: 31.9454, lng: 35.9284 },
+  { name: 'Tehran', lat: 35.6892, lng: 51.389 },
+  { name: 'Riyadh', lat: 24.7136, lng: 46.6753 },
+  { name: 'Dubai', lat: 25.2048, lng: 55.2708 },
+  { name: 'Doha', lat: 25.2854, lng: 51.531 },
+
+  // Sub-Saharan Africa
+  { name: 'Casablanca', lat: 33.5731, lng: -7.5898 },
+  { name: 'Lagos', lat: 6.5244, lng: 3.3792 },
+  { name: 'Accra', lat: 5.6037, lng: -0.187 },
+  { name: 'Nairobi', lat: -1.2921, lng: 36.8219 },
+  { name: 'Addis Ababa', lat: 9.032, lng: 38.7489 },
+  { name: 'Kampala', lat: 0.3476, lng: 32.5825 },
+  { name: 'Johannesburg', lat: -26.2041, lng: 28.0473 },
+  { name: 'Cape Town', lat: -33.9249, lng: 18.4241 },
+
+  // South Asia
+  { name: 'Karachi', lat: 24.8607, lng: 67.0011 },
+  { name: 'Lahore', lat: 31.5204, lng: 74.3587 },
+  { name: 'Islamabad', lat: 33.6844, lng: 73.0479 },
+  { name: 'Mumbai', lat: 19.076, lng: 72.8777 },
+  { name: 'Delhi', lat: 28.7041, lng: 77.1025 },
+  { name: 'Bangalore', lat: 12.9716, lng: 77.5946 },
+  { name: 'Chennai', lat: 13.0827, lng: 80.2707 },
+  { name: 'Kolkata', lat: 22.5726, lng: 88.3639 },
+  { name: 'Dhaka', lat: 23.8103, lng: 90.4125 },
+
+  // Southeast Asia
+  { name: 'Yangon', lat: 16.8661, lng: 96.1951 },
+  { name: 'Bangkok', lat: 13.7563, lng: 100.5018 },
+  { name: 'Kuala Lumpur', lat: 3.139, lng: 101.6869 },
+  { name: 'Singapore', lat: 1.3521, lng: 103.8198 },
+  { name: 'Jakarta', lat: -6.2088, lng: 106.8456 },
+  { name: 'Manila', lat: 14.5995, lng: 120.9842 },
+  { name: 'Ho Chi Minh City', lat: 10.8231, lng: 106.6297 },
+  { name: 'Hanoi', lat: 21.0285, lng: 105.8542 },
+
+  // East Asia
+  { name: 'Hong Kong', lat: 22.3193, lng: 114.1694 },
+  { name: 'Taipei', lat: 25.033, lng: 121.5654 },
+  { name: 'Shanghai', lat: 31.2304, lng: 121.4737 },
+  { name: 'Beijing', lat: 39.9042, lng: 116.4074 },
+  { name: 'Seoul', lat: 37.5665, lng: 126.978 },
+  { name: 'Tokyo', lat: 35.6762, lng: 139.6503 },
+  { name: 'Osaka', lat: 34.6937, lng: 135.5023 },
+  { name: 'Ulaanbaatar', lat: 47.8864, lng: 106.9057 },
+
+  // Oceania
+  { name: 'Sydney', lat: -33.8688, lng: 151.2093 },
+  { name: 'Melbourne', lat: -37.8136, lng: 144.9631 },
+  { name: 'Auckland', lat: -36.8485, lng: 174.7633 }
+];
