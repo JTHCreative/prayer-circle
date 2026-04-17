@@ -34,7 +34,7 @@ function friendRequestNotifId(fromUid) {
 
 // The interactive window draws a lattice of profile circles at fixed columns.
 const GRID_COLS = 6;
-const GRID_MIN_ROWS = 4;
+const GRID_MIN_ROWS = 10;
 // Extra empty rows padded above and below the friends grid so the window
 // can be dragged / scrolled up and down into blank lattice space.
 const GRID_PAD_ROWS = 8;
