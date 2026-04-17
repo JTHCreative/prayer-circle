@@ -67,26 +67,30 @@ export default function Friends() {
   // Click-and-drag vertical panning. Any pointerdown on the scroll area
   // that isn't on an interactive element (a friend circle, + button, etc.)
   // starts a grab, and pointermoves translate into scrollTop updates.
-  // When the first row would leave the top of the viewport we apply a
-  // rubber-band: the overshoot is dampened and snaps back on release.
+  // Dragging past the top row reveals the padded empty lattice above, so
+  // we rubber-band: overshoot is dampened and snaps back on release. A
+  // margin reserves room below the search bar so the first row stays
+  // readable at rest.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
+    const TOP_MARGIN = 100;
     let dragging = false;
     let startY = 0;
     let startScrollTop = 0;
     let startX = 0;
     let pointerId = null;
-    let maxScroll = Infinity;
+    let minScroll = 0;
 
     // Grid top in scroll-content coordinates. Invariant per layout so
     // we snapshot it at gesture start.
-    function computeMaxScroll() {
+    function computeMinScroll() {
       const grid = el.querySelector('.friends-network-grid');
-      if (!grid) return Infinity;
+      if (!grid) return 0;
       const gridRect = grid.getBoundingClientRect();
       const scrollRect = el.getBoundingClientRect();
-      return gridRect.top - scrollRect.top + el.scrollTop;
+      const gridTop = gridRect.top - scrollRect.top + el.scrollTop;
+      return Math.max(0, gridTop - TOP_MARGIN);
     }
 
     function onDown(e) {
@@ -96,7 +100,7 @@ export default function Friends() {
       startX = e.clientX;
       startScrollTop = el.scrollTop;
       pointerId = e.pointerId;
-      maxScroll = computeMaxScroll();
+      minScroll = computeMinScroll();
       el.classList.add('is-grabbing');
     }
     function onMove(e) {
@@ -107,10 +111,10 @@ export default function Friends() {
       // clicks (on empty lattice cells that bubble up) still feel snappy.
       if (Math.abs(dy) + Math.abs(dx) < 4) return;
       let desired = startScrollTop - dy;
-      if (desired > maxScroll) {
+      if (desired < minScroll) {
         // Dampen overshoot so the first row visibly resists the pull
         // instead of snapping hard against the boundary.
-        desired = maxScroll + (desired - maxScroll) * 0.3;
+        desired = minScroll - (minScroll - desired) * 0.3;
       }
       el.scrollTop = desired;
       if (pointerId != null) {
@@ -124,8 +128,8 @@ export default function Friends() {
     function onUp(e) {
       dragging = false;
       el.classList.remove('is-grabbing');
-      if (el.scrollTop > maxScroll) {
-        el.scrollTo({ top: maxScroll, behavior: 'smooth' });
+      if (el.scrollTop < minScroll) {
+        el.scrollTo({ top: minScroll, behavior: 'smooth' });
       }
       if (pointerId != null) {
         try {
