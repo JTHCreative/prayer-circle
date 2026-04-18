@@ -22,7 +22,7 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'public', label: 'Public' },
   { key: 'circles', label: 'My circles' },
-  { key: 'friend', label: 'For me' },
+  { key: 'friend', label: 'Private' },
   { key: 'mine', label: 'My posts' }
 ];
 
@@ -39,61 +39,124 @@ export default function Feed() {
     async function load() {
       if (!profile) return;
       setLoading(true);
-      try {
-        const results = [];
-        const seen = new Set();
-        const pushAll = (snap) => {
-          snap.forEach((d) => {
-            if (!seen.has(d.id)) {
-              seen.add(d.id);
-              results.push({ id: d.id, ...d.data() });
-            }
-          });
-        };
+      const results = [];
+      const seen = new Set();
+      const pushAll = (snap) => {
+        snap.forEach((d) => {
+          if (!seen.has(d.id)) {
+            seen.add(d.id);
+            results.push({ id: d.id, ...d.data() });
+          }
+        });
+      };
+      // Run a single query in isolation: a permission-denied or missing
+      // index in one branch shouldn't blow away all the results from the
+      // others. Logs the error so the cause is visible in the console.
+      const safeRun = async (label, fn) => {
+        try {
+          await fn();
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error(`[Feed] ${label} query failed`, err);
+        }
+      };
 
+      try {
         // Each visibility category requires its own query because Firestore rules
         // filter on the document's visibility field at read time.
         if (tab === 'all' || tab === 'public') {
-          const q = query(
-            collection(db, 'prayers'),
-            where('visibility', '==', 'public'),
-            orderBy('createdAt', 'desc'),
-            limit(50)
-          );
-          pushAll(await getDocs(q));
+          await safeRun('public', async () => {
+            const q = query(
+              collection(db, 'prayers'),
+              where('visibility', '==', 'public'),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            pushAll(await getDocs(q));
+          });
         }
         if ((tab === 'all' || tab === 'circles') && profile.circleIds?.length) {
-          const snaps = await Promise.all(
-            chunk(profile.circleIds, 10).map((group) =>
-              getDocs(
-                query(
-                  collection(db, 'prayers'),
-                  where('circleIds', 'array-contains-any', group),
-                  orderBy('createdAt', 'desc'),
-                  limit(50)
+          await safeRun('circles', async () => {
+            const snaps = await Promise.all(
+              chunk(profile.circleIds, 10).map((group) =>
+                getDocs(
+                  query(
+                    collection(db, 'prayers'),
+                    where('circleIds', 'array-contains-any', group),
+                    orderBy('createdAt', 'desc'),
+                    limit(50)
+                  )
                 )
               )
-            )
-          );
-          snaps.forEach(pushAll);
+            );
+            snaps.forEach(pushAll);
+          });
+        }
+        // My-circles safety net: also include the user's own circles
+        // prayers so they always see their post even if profile.circleIds
+        // hasn't refreshed to include the circle they shared to.
+        if (tab === 'circles') {
+          await safeRun('circles-own', async () => {
+            const q = query(
+              collection(db, 'prayers'),
+              where('authorId', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            const snap = await getDocs(q);
+            snap.forEach((d) => {
+              const data = d.data();
+              if (data.visibility === 'circles' && !seen.has(d.id)) {
+                seen.add(d.id);
+                results.push({ id: d.id, ...data });
+              }
+            });
+          });
         }
         if (tab === 'all' || tab === 'friend') {
-          const q = query(
-            collection(db, 'prayers'),
-            where('targetUserId', '==', user.uid),
-            orderBy('createdAt', 'desc'),
-            limit(50)
-          );
-          pushAll(await getDocs(q));
+          await safeRun('friend', async () => {
+            const q = query(
+              collection(db, 'prayers'),
+              where('targetUserId', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            pushAll(await getDocs(q));
+          });
+        }
+        // Private-tab safety net: also include private prayers the user
+        // authored (they're the sender, not the recipient, so the
+        // targetUserId query above misses them). Reuses the existing
+        // [authorId, createdAt] composite index and filters client-side
+        // so we don't need a new visibility+authorId index.
+        if (tab === 'friend') {
+          await safeRun('friend-own', async () => {
+            const q = query(
+              collection(db, 'prayers'),
+              where('authorId', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            const snap = await getDocs(q);
+            snap.forEach((d) => {
+              const data = d.data();
+              if (data.visibility === 'friend' && !seen.has(d.id)) {
+                seen.add(d.id);
+                results.push({ id: d.id, ...data });
+              }
+            });
+          });
         }
         if (tab === 'all' || tab === 'mine') {
-          const q = query(
-            collection(db, 'prayers'),
-            where('authorId', '==', user.uid),
-            orderBy('createdAt', 'desc'),
-            limit(50)
-          );
-          pushAll(await getDocs(q));
+          await safeRun('mine', async () => {
+            const q = query(
+              collection(db, 'prayers'),
+              where('authorId', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            );
+            pushAll(await getDocs(q));
+          });
         }
 
         results.sort((a, b) => {

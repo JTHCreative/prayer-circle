@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   collection,
   deleteField,
@@ -30,13 +30,23 @@ function gradientForGroup(g) {
   );
 }
 // Border-image + padding-box trick so rounded corners work with a gradient
-// border. The first linear-gradient paints the solid translucent fill; the
-// second paints the gradient that shows through the 1.5px border gap.
+// border. The first linear-gradient paints the translucent fill; the
+// second paints the gradient that shows through the border gap.
 function groupBorderStyle(g) {
   const theme = gradientForGroup(g);
   return {
     background:
       'linear-gradient(rgba(245, 240, 255, 0.88), rgba(245, 240, 255, 0.88)) padding-box, ' +
+      `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
+    borderColor: 'transparent'
+  };
+}
+// Same trick for the floating name pill so its border matches the group.
+function groupLabelStyle(g) {
+  const theme = gradientForGroup(g);
+  return {
+    background:
+      'linear-gradient(#fff, #fff) padding-box, ' +
       `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
     borderColor: 'transparent'
   };
@@ -253,20 +263,24 @@ export default function PrayerBook() {
     };
   }, [user?.uid, positions, groups]);
 
-  const filtered = useMemo(() => {
-    if (visibility === 'all') return entries;
-    return entries.filter((e) => e.visibility === visibility);
-  }, [entries, visibility]);
+  // A card "matches" the filter when its visibility is the selected filter,
+  // or when the filter is "all". Non-matching cards still render — they're
+  // just faded and non-interactive — so the user sees the whole book and
+  // keeps their spatial layout stable while filtering.
+  const matchesFilter = useCallback(
+    (entry) => visibility === 'all' || entry.visibility === visibility,
+    [visibility]
+  );
 
   // Seed a sensible position for any card we haven't placed yet. Walks a
   // simple grid inside the canvas and picks the first slot that doesn't
   // already have a card on it.
   useEffect(() => {
-    if (filtered.length === 0) return;
+    if (entries.length === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const needsSeeding = filtered.some((e) => !positions[e.id]);
+    const needsSeeding = entries.some((e) => !positions[e.id]);
     if (!needsSeeding) return;
 
     const colW = CARD_W + 24;
@@ -286,7 +300,7 @@ export default function PrayerBook() {
         const row = Math.round((p.y - startY) / rowH);
         taken.add(`${col},${row}`);
       }
-      for (const e of filtered) {
+      for (const e of entries) {
         if (next[e.id]) continue;
         let placed = false;
         for (let row = 0; row < 200 && !placed; row++) {
@@ -301,7 +315,7 @@ export default function PrayerBook() {
       }
       return next;
     });
-  }, [filtered, positions]);
+  }, [entries, positions]);
 
   // --- Card drag -----------------------------------------------------------
 
@@ -481,7 +495,7 @@ export default function PrayerBook() {
 
   function cardsInsideGroup(g) {
     const ids = [];
-    for (const entry of filtered) {
+    for (const entry of entries) {
       const p = positions[entry.id];
       if (!p) continue;
       const cx = p.x + CARD_W / 2;
@@ -704,14 +718,14 @@ export default function PrayerBook() {
     setViewport(nextV);
   }
 
-  // Wheel listener has to be attached natively so we can preventDefault on
-  // ctrl+wheel (browsers map that to page zoom by default, and React's
-  // synthetic wheel is passive so preventDefault would be ignored).
+  // Wheel listener has to be attached natively so we can preventDefault
+  // (React's synthetic wheel is passive so preventDefault would be
+  // ignored). Any wheel event inside the canvas zooms instead of scrolling
+  // the page — matches the feel of a canvas app like Figma or Miro.
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     function onWheel(e) {
-      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const ax = e.clientX - rect.left;
@@ -889,6 +903,7 @@ export default function PrayerBook() {
               <button
                 type="button"
                 className="pb-group-label"
+                style={groupLabelStyle(g)}
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditingGroup({
@@ -958,10 +973,11 @@ export default function PrayerBook() {
             />
           )}
 
-          {filtered.map((entry) => {
+          {entries.map((entry) => {
             const pos = positions[entry.id];
             if (!pos) return null;
             const tilt = tiltFor(entry.id);
+            const muted = !matchesFilter(entry);
             return (
               <div
                 key={entry.id}
@@ -969,7 +985,8 @@ export default function PrayerBook() {
                   if (el) cardRefs.current[entry.id] = el;
                   else delete cardRefs.current[entry.id];
                 }}
-                className="pb-card-wrap"
+                className={`pb-card-wrap${muted ? ' is-muted' : ''}`}
+                aria-hidden={muted || undefined}
                 style={{
                   transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
                   '--pb-tilt': `${tilt}deg`
@@ -993,7 +1010,7 @@ export default function PrayerBook() {
         <div className="pb-canvas-hint" aria-hidden="true">
           {mode === 'group'
             ? 'Drag on empty canvas to draw a group area'
-            : 'Drag cards · drag a group to move its cards · drag empty canvas to pan · ctrl + scroll to zoom'}
+            : 'Drag cards · drag a group to move its cards · drag empty canvas to pan · scroll to zoom'}
         </div>
       </div>
 
