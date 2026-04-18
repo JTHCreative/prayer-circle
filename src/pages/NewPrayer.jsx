@@ -23,6 +23,28 @@ const VISIBILITY_OPTIONS = [
   { key: 'friend', label: 'Private', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
 ];
 
+// Fixed particle field (no randomness on each render so the positions
+// don't reshuffle when React re-renders the page). Each particle picks a
+// column, size, fade, and drift cycle; the CSS keyframe handles motion.
+const NP_PARTICLES = [
+  { left: 6,  size: 3, delay: 0,    duration: 14, opacity: 0.55 },
+  { left: 14, size: 2, delay: 3,    duration: 18, opacity: 0.45 },
+  { left: 22, size: 4, delay: 6,    duration: 16, opacity: 0.6  },
+  { left: 31, size: 2, delay: 1.5,  duration: 20, opacity: 0.4  },
+  { left: 39, size: 3, delay: 8,    duration: 15, opacity: 0.5  },
+  { left: 47, size: 2, delay: 4,    duration: 19, opacity: 0.45 },
+  { left: 55, size: 4, delay: 10,   duration: 13, opacity: 0.55 },
+  { left: 63, size: 2, delay: 2,    duration: 17, opacity: 0.4  },
+  { left: 71, size: 3, delay: 7,    duration: 21, opacity: 0.5  },
+  { left: 79, size: 2, delay: 11,   duration: 16, opacity: 0.45 },
+  { left: 87, size: 4, delay: 5,    duration: 14, opacity: 0.6  },
+  { left: 94, size: 2, delay: 9,    duration: 22, opacity: 0.4  },
+  { left: 18, size: 2, delay: 12.5, duration: 18, opacity: 0.35 },
+  { left: 51, size: 2, delay: 0.5,  duration: 24, opacity: 0.35 },
+  { left: 75, size: 3, delay: 13,   duration: 15, opacity: 0.5  },
+  { left: 10, size: 2, delay: 4.5,  duration: 23, opacity: 0.3  }
+];
+
 export default function NewPrayer() {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
@@ -137,6 +159,22 @@ export default function NewPrayer() {
       </div>
 
       <div className="new-prayer-space">
+        <div className="np-particles" aria-hidden="true">
+          {NP_PARTICLES.map((p, i) => (
+            <span
+              key={i}
+              className="np-particle"
+              style={{
+                left: `${p.left}%`,
+                width: `${p.size}px`,
+                height: `${p.size}px`,
+                animationDelay: `${p.delay}s`,
+                animationDuration: `${p.duration}s`,
+                opacity: p.opacity
+              }}
+            />
+          ))}
+        </div>
         <div className="new-prayer-inner">
           <div className="new-prayer-row">
             <form
