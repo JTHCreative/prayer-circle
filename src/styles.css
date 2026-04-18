@@ -3140,15 +3140,17 @@ button.friends-network-search-person-btn:hover {
   cursor: grab;
   will-change: transform;
 }
+/* Hover / drag feedback uses box-shadow only because the group's
+   background + border-color are set inline (gradient-border trick), so
+   touching them from CSS would just be no-ops. */
 .pb-canvas.mode-move .pb-group:hover {
-  border-color: rgba(99, 102, 241, 0.7);
-  background: rgba(238, 232, 255, 0.65);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.6),
+    0 6px 18px rgba(99, 102, 241, 0.16);
 }
 .pb-group.dragging {
   cursor: grabbing;
   z-index: 15;
-  border-style: solid;
-  border-color: rgba(139, 92, 246, 0.7);
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.6),
     0 14px 30px rgba(99, 102, 241, 0.22);
@@ -3227,9 +3229,9 @@ button.friends-network-search-person-btn:hover {
   transform: none;
   box-shadow: var(--shadow);
 }
-.pb-group-remove {
+.pb-group-remove,
+.pb-group-edit {
   position: absolute;
-  right: 6px;
   top: 6px;
   width: 22px;
   height: 22px;
@@ -3242,10 +3244,17 @@ button.friends-network-search-person-btn:hover {
   border-radius: 999px;
   box-shadow: var(--shadow);
   opacity: 0;
-  transition: opacity 140ms ease;
+  transition: opacity 140ms ease, color 140ms ease;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
-.pb-group:hover .pb-group-remove { opacity: 1; }
+.pb-group-remove { right: 6px; }
+.pb-group-edit { right: 34px; }
+.pb-group-edit:hover { color: var(--primary); }
+.pb-group:hover .pb-group-remove,
+.pb-group:hover .pb-group-edit { opacity: 1; }
 
 .pb-rename-card { max-width: 420px; }
 

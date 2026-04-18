@@ -14,6 +14,33 @@ import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import PrayerBookCard from '../components/PrayerBookCard.jsx';
 import { togglePraying } from '../utils/prayers.js';
+import {
+  DEFAULT_GRADIENT_KEY,
+  GRADIENT_PALETTES
+} from '../utils/circleGradients.js';
+
+const GRADIENT_BY_KEY = Object.fromEntries(
+  GRADIENT_PALETTES.map((g) => [g.key, g])
+);
+function gradientForGroup(g) {
+  return (
+    GRADIENT_BY_KEY[g.gradientKey] ||
+    GRADIENT_BY_KEY[DEFAULT_GRADIENT_KEY] ||
+    GRADIENT_PALETTES[0]
+  );
+}
+// Border-image + padding-box trick so rounded corners work with a gradient
+// border. The first linear-gradient paints the solid translucent fill; the
+// second paints the gradient that shows through the 1.5px border gap.
+function groupBorderStyle(g) {
+  const theme = gradientForGroup(g);
+  return {
+    background:
+      'linear-gradient(rgba(245, 240, 255, 0.88), rgba(245, 240, 255, 0.88)) padding-box, ' +
+      `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
+    borderColor: 'transparent'
+  };
+}
 
 // Card footprint in the canvas. Used for auto-placement of new cards and
 // for the "is this card inside a group" hit-test.
@@ -119,8 +146,9 @@ export default function PrayerBook() {
   const [viewport, setViewport] = useState({ x: 0, y: 0 });
   // Zoom is a scale factor applied to the content layer; 1 = real size.
   const [zoom, setZoom] = useState(1);
-  // When set, shows a modal to rename the group; also holds the draft name.
-  const [renamingGroup, setRenamingGroup] = useState(null);
+  // When set, shows a modal to edit the group (name + border color); also
+  // holds the draft values while the user types.
+  const [editingGroup, setEditingGroup] = useState(null);
 
   const canvasRef = useRef(null);
   const contentRef = useRef(null);
@@ -429,7 +457,12 @@ export default function PrayerBook() {
       if (!name) return;
       setGroups((prev) => [
         ...prev,
-        { id: `g_${Date.now()}`, name, ...rect }
+        {
+          id: `g_${Date.now()}`,
+          name,
+          gradientKey: DEFAULT_GRADIENT_KEY,
+          ...rect
+        }
       ]);
       // Flip back to move mode so the user can immediately start arranging
       // cards into the fresh region.
@@ -627,14 +660,17 @@ export default function PrayerBook() {
     setGroups((prev) => prev.filter((g) => g.id !== id));
   }
 
-  function submitRename() {
-    if (!renamingGroup) return;
-    const name = renamingGroup.name.trim();
+  function submitGroupEdit() {
+    if (!editingGroup) return;
+    const name = editingGroup.name.trim();
     if (!name) return;
+    const gradientKey = editingGroup.gradientKey || DEFAULT_GRADIENT_KEY;
     setGroups((prev) =>
-      prev.map((g) => (g.id === renamingGroup.id ? { ...g, name } : g))
+      prev.map((g) =>
+        g.id === editingGroup.id ? { ...g, name, gradientKey } : g
+      )
     );
-    setRenamingGroup(null);
+    setEditingGroup(null);
   }
 
   // --- Zoom ----------------------------------------------------------------
@@ -842,7 +878,8 @@ export default function PrayerBook() {
               style={{
                 transform: `translate(${g.x}px, ${g.y}px)`,
                 width: g.w,
-                height: g.h
+                height: g.h,
+                ...groupBorderStyle(g)
               }}
               onPointerDown={(e) => handleGroupPointerDown(e, g)}
               onPointerMove={handleGroupPointerMove}
@@ -854,11 +891,36 @@ export default function PrayerBook() {
                 className="pb-group-label"
                 onClick={(e) => {
                   e.stopPropagation();
-                  setRenamingGroup({ id: g.id, name: g.name });
+                  setEditingGroup({
+                    id: g.id,
+                    name: g.name,
+                    gradientKey: g.gradientKey || DEFAULT_GRADIENT_KEY
+                  });
                 }}
-                title="Rename group"
+                title="Edit group"
               >
                 {g.name}
+              </button>
+              <button
+                type="button"
+                className="pb-group-edit"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setEditingGroup({
+                    id: g.id,
+                    name: g.name,
+                    gradientKey: g.gradientKey || DEFAULT_GRADIENT_KEY
+                  });
+                }}
+                aria-label={`Edit group ${g.name}`}
+                title="Edit group"
+              >
+                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                  <path
+                    d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                    fill="currentColor"
+                  />
+                </svg>
               </button>
               <button
                 type="button"
@@ -935,8 +997,8 @@ export default function PrayerBook() {
         </div>
       </div>
 
-      {renamingGroup && (
-        <div className="overlay" onClick={() => setRenamingGroup(null)}>
+      {editingGroup && (
+        <div className="overlay" onClick={() => setEditingGroup(null)}>
           <div
             className="overlay-card pb-rename-card"
             onClick={(e) => e.stopPropagation()}
@@ -944,30 +1006,52 @@ export default function PrayerBook() {
             <button
               type="button"
               className="overlay-close"
-              onClick={() => setRenamingGroup(null)}
+              onClick={() => setEditingGroup(null)}
               aria-label="Close"
             >
               ×
             </button>
-            <h2>Rename group</h2>
+            <h2>Edit group</h2>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                submitRename();
+                submitGroupEdit();
               }}
             >
               <label>
                 Group name
                 <input
                   autoFocus
-                  value={renamingGroup.name}
+                  value={editingGroup.name}
                   onChange={(e) =>
-                    setRenamingGroup((prev) => ({ ...prev, name: e.target.value }))
+                    setEditingGroup((prev) => ({ ...prev, name: e.target.value }))
                   }
                 />
               </label>
+              <div>
+                <p className="label">Border color</p>
+                <div className="circle-gradient-picker">
+                  {GRADIENT_PALETTES.map((g) => (
+                    <button
+                      key={g.key}
+                      type="button"
+                      className={`circle-gradient-option${
+                        editingGroup.gradientKey === g.key ? ' selected' : ''
+                      }`}
+                      style={{
+                        background: `radial-gradient(circle at 30% 25%, ${g.from} 0%, ${g.to} 100%)`
+                      }}
+                      onClick={() =>
+                        setEditingGroup((prev) => ({ ...prev, gradientKey: g.key }))
+                      }
+                      aria-label={`${g.key} gradient`}
+                      aria-pressed={editingGroup.gradientKey === g.key}
+                    />
+                  ))}
+                </div>
+              </div>
               <div className="overlay-actions">
-                <button type="submit" disabled={!renamingGroup.name.trim()}>
+                <button type="submit" disabled={!editingGroup.name.trim()}>
                   Save
                 </button>
               </div>
