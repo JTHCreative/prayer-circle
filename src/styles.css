@@ -868,10 +868,31 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   scroll-snap-type: x mandatory;
   -webkit-overflow-scrolling: touch;
   padding: 4px 4px 14px;
-  scrollbar-width: thin;
   cursor: grab;
   user-select: none;
   touch-action: pan-x;
+  /* Gradient-themed scrollbar to match the Circles/Feed blue→purple palette.
+     Firefox uses scrollbar-color (thumb, track); WebKit uses ::-webkit-
+     scrollbar-* pseudo-elements. */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(139, 92, 246, 0.55) transparent;
+}
+.prayer-swipe-track::-webkit-scrollbar {
+  height: 8px;
+}
+.prayer-swipe-track::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 999px;
+}
+.prayer-swipe-track::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+.prayer-swipe-track::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #2563eb, #7c3aed);
+  background-clip: padding-box;
 }
 .prayer-swipe-track.dragging {
   cursor: grabbing;
