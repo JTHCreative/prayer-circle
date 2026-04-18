@@ -28,22 +28,22 @@ const VISIBILITY_OPTIONS = [
 // a left%, top%, size, duration, and delay; the CSS keyframe handles a
 // gentle twinkle-in-place so every speck is visible at any given moment.
 const NP_PARTICLES = [
-  { left:  6, top: 82, size: 5, delay: 0,    duration: 4.2, peak: 0.9  },
-  { left: 14, top: 18, size: 4, delay: 1.5,  duration: 5.0, peak: 0.75 },
-  { left: 22, top: 64, size: 6, delay: 0.4,  duration: 4.6, peak: 1    },
-  { left: 31, top: 36, size: 4, delay: 2.3,  duration: 5.4, peak: 0.7  },
-  { left: 39, top: 90, size: 5, delay: 0.9,  duration: 3.8, peak: 0.85 },
-  { left: 47, top: 12, size: 4, delay: 1.1,  duration: 5.6, peak: 0.7  },
-  { left: 55, top: 72, size: 6, delay: 2.0,  duration: 4.2, peak: 0.95 },
-  { left: 63, top: 28, size: 4, delay: 0.3,  duration: 5.0, peak: 0.75 },
-  { left: 71, top: 58, size: 5, delay: 1.8,  duration: 4.4, peak: 0.9  },
-  { left: 79, top: 8,  size: 4, delay: 2.6,  duration: 5.2, peak: 0.7  },
-  { left: 87, top: 48, size: 6, delay: 0.6,  duration: 3.9, peak: 1    },
-  { left: 94, top: 76, size: 4, delay: 1.3,  duration: 5.8, peak: 0.7  },
-  { left: 18, top: 42, size: 4, delay: 3.2,  duration: 4.8, peak: 0.65 },
-  { left: 51, top: 50, size: 4, delay: 0.7,  duration: 6.0, peak: 0.65 },
-  { left: 75, top: 88, size: 5, delay: 2.4,  duration: 4.2, peak: 0.9  },
-  { left: 10, top: 30, size: 4, delay: 1.9,  duration: 5.4, peak: 0.6  }
+  { left:  6, top: 82, size: 5, delay: 0,    duration: 11, peak: 0.9  },
+  { left: 14, top: 18, size: 4, delay: 2.5,  duration: 14, peak: 0.75 },
+  { left: 22, top: 64, size: 6, delay: 1,    duration: 12, peak: 1    },
+  { left: 31, top: 36, size: 4, delay: 4,    duration: 16, peak: 0.7  },
+  { left: 39, top: 90, size: 5, delay: 2,    duration: 10, peak: 0.85 },
+  { left: 47, top: 12, size: 4, delay: 3,    duration: 15, peak: 0.7  },
+  { left: 55, top: 72, size: 6, delay: 5,    duration: 11, peak: 0.95 },
+  { left: 63, top: 28, size: 4, delay: 0.6,  duration: 13, peak: 0.75 },
+  { left: 71, top: 58, size: 5, delay: 3.5,  duration: 12, peak: 0.9  },
+  { left: 79, top: 8,  size: 4, delay: 6,    duration: 14, peak: 0.7  },
+  { left: 87, top: 48, size: 6, delay: 1.5,  duration: 10, peak: 1    },
+  { left: 94, top: 76, size: 4, delay: 4.5,  duration: 17, peak: 0.7  },
+  { left: 18, top: 42, size: 4, delay: 7,    duration: 13, peak: 0.65 },
+  { left: 51, top: 50, size: 4, delay: 1.2,  duration: 18, peak: 0.65 },
+  { left: 75, top: 88, size: 5, delay: 5.5,  duration: 11, peak: 0.9  },
+  { left: 10, top: 30, size: 4, delay: 3.8,  duration: 15, peak: 0.6  }
 ];
 
 export default function NewPrayer() {

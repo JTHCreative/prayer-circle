@@ -2558,20 +2558,23 @@ button.friends-network-search-person-btn:hover {
   box-shadow:
     0 0 10px rgba(167, 139, 250, 0.95),
     0 0 22px rgba(99, 102, 241, 0.6);
-  /* Base opacity is set directly so the particle is visible even if the
-     animation isn't running (reduced-motion, browser glitch, delay). The
-     animation's opacity keyframe at 100% is also derived from --np-peak,
-     so visibility never depends on it resolving correctly. */
+  /* Base opacity guards against an unstyled flash before the animation
+     picks up; the keyframe drives the actual value from here. */
   opacity: var(--np-peak, 0.85);
-  animation-name: np-twinkle;
+  animation-name: np-float;
   animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  animation-direction: alternate;
   will-change: opacity, transform;
 }
-@keyframes np-twinkle {
-  0%   { transform: translateY(0)     scale(0.85); filter: brightness(0.7); }
-  100% { transform: translateY(-10px) scale(1.15); filter: brightness(1.25); }
+/* Drifts in a small loop (±22px) while fading between a bright peak and
+   a soft low — never all the way to 0 so the speck always reads as
+   "light," just breathing. */
+@keyframes np-float {
+  0%   { transform: translate(0,      0)     scale(0.95); opacity: 0.35; }
+  25%  { transform: translate(10px,  -14px)  scale(1.05); opacity: var(--np-peak, 0.85); }
+  50%  { transform: translate(-4px,  -22px)  scale(1);    opacity: 0.55; }
+  75%  { transform: translate(-12px, -10px)  scale(1.08); opacity: var(--np-peak, 0.85); }
+  100% { transform: translate(0,      0)     scale(0.95); opacity: 0.35; }
 }
 @media (prefers-reduced-motion: reduce) {
   .np-particle { animation: none; }
