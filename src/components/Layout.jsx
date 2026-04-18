@@ -23,6 +23,7 @@ export default function Layout() {
   const interactiveWindowPage =
     location.pathname === '/circles' ||
     location.pathname === '/friends' ||
+    location.pathname === '/book' ||
     location.pathname === '/new';
   const [pendingRequests, setPendingRequests] = useState(0);
 
