@@ -170,12 +170,13 @@ export default function NewPrayer() {
                 height: `${p.size}px`,
                 animationDelay: `${p.delay}s`,
                 animationDuration: `${p.duration}s`,
-                opacity: p.opacity
+                '--np-peak': p.opacity
               }}
             />
           ))}
         </div>
-        <div className="new-prayer-inner">
+        <div className="new-prayer-scroll">
+          <div className="new-prayer-inner">
           <div className="new-prayer-row">
             <form
               className="new-prayer-card new-prayer-main"
@@ -314,6 +315,7 @@ export default function NewPrayer() {
               )}
             </div>
           )}
+        </div>
         </div>
       </div>
     </div>

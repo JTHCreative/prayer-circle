@@ -2518,13 +2518,21 @@ button.friends-network-search-person-btn:hover {
   flex: 1;
   min-height: 520px;
   border-radius: 18px;
-  overflow-y: auto;
+  /* Scrolling now lives on .new-prayer-scroll so the particle layer can
+     sit pinned behind the content regardless of scroll position. */
+  overflow: hidden;
   border: 1px solid var(--border);
   background:
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
     linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
   box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
+}
+.new-prayer-scroll {
+  position: absolute;
+  inset: 0;
+  overflow-y: auto;
+  z-index: 1;
 }
 
 /* Decorative light-speck layer — sits behind the form cards and drifts
@@ -2536,31 +2544,32 @@ button.friends-network-search-person-btn:hover {
   pointer-events: none;
   z-index: 0;
 }
-.new-prayer-inner { position: relative; z-index: 1; }
 .np-particle {
   position: absolute;
   bottom: -8px;
   border-radius: 999px;
   background: radial-gradient(
     circle at 30% 30%,
-    rgba(255, 255, 255, 0.95) 0%,
-    rgba(199, 210, 254, 0.6) 55%,
+    rgba(255, 255, 255, 1) 0%,
+    rgba(199, 210, 254, 0.85) 50%,
     rgba(167, 139, 250, 0) 100%
   );
   box-shadow:
-    0 0 6px rgba(167, 139, 250, 0.55),
-    0 0 12px rgba(99, 102, 241, 0.25);
+    0 0 8px rgba(167, 139, 250, 0.75),
+    0 0 18px rgba(99, 102, 241, 0.45);
   animation-name: np-drift;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
   will-change: transform, opacity;
 }
+/* Animation rises within the container — keyframe distances are sized
+   so the particle is visible somewhere in the space at any moment. */
 @keyframes np-drift {
-  0%   { transform: translate3d(0, 0, 0);        opacity: 0; }
-  10%  { opacity: var(--np-peak, 1); }
-  50%  { transform: translate3d(8px, -52vh, 0);  }
-  90%  { opacity: var(--np-peak, 1); }
-  100% { transform: translate3d(-4px, -110vh, 0); opacity: 0; }
+  0%   { transform: translate3d(0, 0, 0);         opacity: 0; }
+  8%   { opacity: var(--np-peak, 0.8); }
+  50%  { transform: translate3d(10px, -340px, 0); }
+  92%  { opacity: var(--np-peak, 0.8); }
+  100% { transform: translate3d(-6px, -720px, 0); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .np-particle { animation: none; opacity: 0.3; }
