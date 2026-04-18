@@ -1190,12 +1190,14 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   min-height: 0;
 }
 /* Pinned region: verse card + header + tabs. Sits above .feed-scroll so
-   it stays put while the prayer list below scrolls on its own. */
+   it stays put while the prayer list below scrolls on its own. No
+   z-index here — flex items with z-index create a stacking context
+   (per the flexbox spec) and would paint over the ::after gradient
+   edge. */
 .feed-fixed {
   flex: 0 0 auto;
   padding: 20px 20px 0;
   background: #fff;
-  z-index: 2;
 }
 .feed-pane.collapsed .feed-fixed { display: none; }
 /* Blue -> purple gradient line along the right edge of the sidebar */
