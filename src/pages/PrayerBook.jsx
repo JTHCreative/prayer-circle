@@ -117,6 +117,8 @@ export default function PrayerBook() {
   const [drawingGroup, setDrawingGroup] = useState(null);
   // Canvas pan offset — purely ephemeral, not persisted.
   const [viewport, setViewport] = useState({ x: 0, y: 0 });
+  // Zoom is a scale factor applied to the content layer; 1 = real size.
+  const [zoom, setZoom] = useState(1);
   // When set, shows a modal to rename the group; also holds the draft name.
   const [renamingGroup, setRenamingGroup] = useState(null);
 
@@ -285,10 +287,11 @@ export default function PrayerBook() {
     const rect = canvas.getBoundingClientRect();
     dragRef.current = {
       id,
-      // Positions live in content space; back out the viewport pan so the
-      // card follows the cursor regardless of how far we've panned.
-      offsetX: e.clientX - rect.left - viewport.x - pos.x,
-      offsetY: e.clientY - rect.top - viewport.y - pos.y,
+      // Positions live in content space; back out viewport pan and zoom so
+      // the card follows the cursor regardless of how far we've panned or
+      // how zoomed the canvas is.
+      offsetX: (e.clientX - rect.left - viewport.x) / zoom - pos.x,
+      offsetY: (e.clientY - rect.top - viewport.y) / zoom - pos.y,
       moved: false
     };
     try {
@@ -306,8 +309,8 @@ export default function PrayerBook() {
     const rect = canvas.getBoundingClientRect();
     // No bounds clamp: with a pannable canvas a card can sit outside the
     // visible window and still be reached by panning to it.
-    const x = e.clientX - rect.left - viewport.x - d.offsetX;
-    const y = e.clientY - rect.top - viewport.y - d.offsetY;
+    const x = (e.clientX - rect.left - viewport.x) / zoom - d.offsetX;
+    const y = (e.clientY - rect.top - viewport.y) / zoom - d.offsetY;
     d.moved = true;
     // Mutate DOM directly for smooth drag; commit to state on release.
     const el = cardRefs.current[d.id];
@@ -351,8 +354,8 @@ export default function PrayerBook() {
     const rect = canvas.getBoundingClientRect();
     if (mode === 'group') {
       drawRef.current = {
-        startX: e.clientX - rect.left - viewport.x,
-        startY: e.clientY - rect.top - viewport.y
+        startX: (e.clientX - rect.left - viewport.x) / zoom,
+        startY: (e.clientY - rect.top - viewport.y) / zoom
       };
       setDrawingGroup({
         x: drawRef.current.startX,
@@ -384,8 +387,8 @@ export default function PrayerBook() {
     if (!canvas) return;
     if (mode === 'group' && drawRef.current) {
       const rect = canvas.getBoundingClientRect();
-      const cx = e.clientX - rect.left - viewport.x;
-      const cy = e.clientY - rect.top - viewport.y;
+      const cx = (e.clientX - rect.left - viewport.x) / zoom;
+      const cy = (e.clientY - rect.top - viewport.y) / zoom;
       const { startX, startY } = drawRef.current;
       setDrawingGroup({
         x: Math.min(startX, cx),
@@ -401,9 +404,11 @@ export default function PrayerBook() {
       p.lastX = nx;
       p.lastY = ny;
       // Mutate DOM directly for smooth pan; commit to state on release so
-      // subsequent mouse-to-canvas math uses the updated viewport.
+      // subsequent mouse-to-canvas math uses the updated viewport. The
+      // scale() is kept in the transform so zoom is preserved while panning.
       if (contentRef.current) {
-        contentRef.current.style.transform = `translate(${nx}px, ${ny}px)`;
+        contentRef.current.style.transform =
+          `translate(${nx}px, ${ny}px) scale(${zoom})`;
       }
       canvas.style.setProperty('--pb-dot-x', `${nx}px`);
       canvas.style.setProperty('--pb-dot-y', `${ny}px`);
@@ -465,8 +470,8 @@ export default function PrayerBook() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const startPtX = e.clientX - rect.left - viewport.x;
-    const startPtY = e.clientY - rect.top - viewport.y;
+    const startPtX = (e.clientX - rect.left - viewport.x) / zoom;
+    const startPtY = (e.clientY - rect.top - viewport.y) / zoom;
     const contained = cardsInsideGroup(g);
     const cardStarts = {};
     for (const id of contained) cardStarts[id] = { ...positions[id] };
@@ -492,8 +497,8 @@ export default function PrayerBook() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const ptX = e.clientX - rect.left - viewport.x;
-    const ptY = e.clientY - rect.top - viewport.y;
+    const ptX = (e.clientX - rect.left - viewport.x) / zoom;
+    const ptY = (e.clientY - rect.top - viewport.y) / zoom;
     const dx = ptX - d.startPtX;
     const dy = ptY - d.startPtY;
     d.moved = true;
@@ -547,8 +552,8 @@ export default function PrayerBook() {
     resizeRef.current = {
       id: g.id,
       dir,
-      startPtX: e.clientX - rect.left - viewport.x,
-      startPtY: e.clientY - rect.top - viewport.y,
+      startPtX: (e.clientX - rect.left - viewport.x) / zoom,
+      startPtY: (e.clientY - rect.top - viewport.y) / zoom,
       startX: g.x,
       startY: g.y,
       startW: g.w,
@@ -569,8 +574,8 @@ export default function PrayerBook() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const ptX = e.clientX - rect.left - viewport.x;
-    const ptY = e.clientY - rect.top - viewport.y;
+    const ptX = (e.clientX - rect.left - viewport.x) / zoom;
+    const ptY = (e.clientY - rect.top - viewport.y) / zoom;
     const dx = ptX - r.startPtX;
     const dy = ptY - r.startPtY;
     let x = r.startX;
@@ -632,6 +637,72 @@ export default function PrayerBook() {
     setRenamingGroup(null);
   }
 
+  // --- Zoom ----------------------------------------------------------------
+
+  const ZOOM_MIN = 0.4;
+  const ZOOM_MAX = 2.5;
+
+  // Refs mirror zoom/viewport state so rapid wheel events don't all read the
+  // same stale value from closure before React re-renders.
+  const zoomRef = useRef(zoom);
+  const viewportRef = useRef(viewport);
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
+
+  // Zoom around a canvas-relative point. We solve for the viewport that
+  // keeps the same content coord under that point so the page doesn't jump.
+  function zoomAtPoint(nextZoom, anchorX, anchorY) {
+    const curZ = zoomRef.current;
+    const curV = viewportRef.current;
+    const z = Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, nextZoom));
+    const cx = (anchorX - curV.x) / curZ;
+    const cy = (anchorY - curV.y) / curZ;
+    const nextV = { x: anchorX - cx * z, y: anchorY - cy * z };
+    zoomRef.current = z;
+    viewportRef.current = nextV;
+    setZoom(z);
+    setViewport(nextV);
+  }
+
+  // Wheel listener has to be attached natively so we can preventDefault on
+  // ctrl+wheel (browsers map that to page zoom by default, and React's
+  // synthetic wheel is passive so preventDefault would be ignored).
+  useEffect(() => {
+    const el = canvasRef.current;
+    if (!el) return;
+    function onWheel(e) {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      const ax = e.clientX - rect.left;
+      const ay = e.clientY - rect.top;
+      // deltaY is sign-flipped — wheel up should zoom in.
+      const factor = Math.exp(-e.deltaY * 0.0015);
+      zoomAtPoint(zoomRef.current * factor, ax, ay);
+    }
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
+
+  // Zoom buttons zoom around the canvas center so keyboard-only users still
+  // get a predictable anchor.
+  function bumpZoom(factor) {
+    const el = canvasRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    zoomAtPoint(zoomRef.current * factor, rect.width / 2, rect.height / 2);
+  }
+  function resetZoom() {
+    zoomRef.current = 1;
+    viewportRef.current = { x: 0, y: 0 };
+    setZoom(1);
+    setViewport({ x: 0, y: 0 });
+  }
+
   // --- Unpray (from Amen animation) ---------------------------------------
 
   const handleUnpray = useCallback(
@@ -674,7 +745,8 @@ export default function PrayerBook() {
         className={`pb-canvas mode-${mode}`}
         style={{
           '--pb-dot-x': `${viewport.x}px`,
-          '--pb-dot-y': `${viewport.y}px`
+          '--pb-dot-y': `${viewport.y}px`,
+          '--pb-dot-size': `${22 * zoom}px`
         }}
         onPointerDown={handleCanvasPointerDown}
         onPointerMove={handleCanvasPointerMove}
@@ -696,6 +768,36 @@ export default function PrayerBook() {
               onClick={() => setMode('group')}
             >
               + Group area
+            </button>
+          </div>
+          <div className="pb-zoom-group" role="group" aria-label="Zoom">
+            <button
+              type="button"
+              className="pb-zoom"
+              onClick={() => bumpZoom(1 / 1.2)}
+              disabled={zoom <= ZOOM_MIN + 0.001}
+              aria-label="Zoom out"
+              title="Zoom out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className="pb-zoom pb-zoom-reset"
+              onClick={resetZoom}
+              title="Reset zoom"
+            >
+              {Math.round(zoom * 100)}%
+            </button>
+            <button
+              type="button"
+              className="pb-zoom"
+              onClick={() => bumpZoom(1.2)}
+              disabled={zoom >= ZOOM_MAX - 0.001}
+              aria-label="Zoom in"
+              title="Zoom in"
+            >
+              +
             </button>
           </div>
           <div className="pb-filter-group" role="group" aria-label="Visibility filter">
@@ -725,7 +827,9 @@ export default function PrayerBook() {
         <div
           ref={contentRef}
           className="pb-canvas-content"
-          style={{ transform: `translate(${viewport.x}px, ${viewport.y}px)` }}
+          style={{
+            transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${zoom})`
+          }}
         >
           {groups.map((g) => (
             <div
@@ -827,7 +931,7 @@ export default function PrayerBook() {
         <div className="pb-canvas-hint" aria-hidden="true">
           {mode === 'group'
             ? 'Drag on empty canvas to draw a group area'
-            : 'Drag cards · drag a group to move its cards with it · drag empty canvas to pan'}
+            : 'Drag cards · drag a group to move its cards · drag empty canvas to pan · ctrl + scroll to zoom'}
         </div>
       </div>
 
