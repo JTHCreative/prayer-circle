@@ -735,7 +735,7 @@ export default function PrayerBook() {
           <p className="muted">
             Every prayer you&rsquo;re praying for, laid out like a table.
             Drag to arrange, draw a group to cluster them, and tap{' '}
-            <strong>Prayed</strong> when you&rsquo;re done.
+            <strong>Pray</strong> when you&rsquo;re done.
           </p>
         </div>
       </div>
