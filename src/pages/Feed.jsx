@@ -308,15 +308,7 @@ export default function Feed() {
         >
           <span className="sidebar-toggle-arrow">{collapsed ? '›' : '‹'}</span>
         </button>
-        <div
-          ref={scrollRef}
-          className="feed-scroll"
-          aria-hidden={collapsed}
-          onPointerDown={handleFeedPointerDown}
-          onPointerMove={handleFeedPointerMove}
-          onPointerUp={handleFeedPointerUp}
-          onPointerCancel={handleFeedPointerUp}
-        >
+        <div className="feed-fixed" aria-hidden={collapsed}>
           <DailyVerseCard />
           <div className="feed-header">
             <h1>Prayer Feed</h1>
@@ -335,7 +327,16 @@ export default function Feed() {
               </button>
             ))}
           </div>
-
+        </div>
+        <div
+          ref={scrollRef}
+          className="feed-scroll"
+          aria-hidden={collapsed}
+          onPointerDown={handleFeedPointerDown}
+          onPointerMove={handleFeedPointerMove}
+          onPointerUp={handleFeedPointerUp}
+          onPointerCancel={handleFeedPointerUp}
+        >
           {loading ? (
             <p className="muted">Loading prayers…</p>
           ) : prayers.length === 0 ? (

@@ -1185,7 +1185,19 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   position: relative;
   overflow: visible;
   transition: flex-basis 240ms ease;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
+/* Pinned region: verse card + header + tabs. Sits above .feed-scroll so
+   it stays put while the prayer list below scrolls on its own. */
+.feed-fixed {
+  flex: 0 0 auto;
+  padding: 20px 20px 0;
+  background: #fff;
+  z-index: 2;
+}
+.feed-pane.collapsed .feed-fixed { display: none; }
 /* Blue -> purple gradient line along the right edge of the sidebar */
 .feed-pane::after {
   content: '';
@@ -1203,9 +1215,10 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 
 .feed-scroll {
-  height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
-  padding: 20px;
+  padding: 12px 20px 20px;
   cursor: grab;
   /* Matches the Circles prayer-swipe scrollbar — blue→purple gradient
      thumb on a transparent track. */
@@ -1232,9 +1245,6 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .feed-pane.collapsed .feed-scroll { display: none; }
 
 .feed-header {
-  position: sticky;
-  top: 0;
-  z-index: 2;
   background: #fff;
   padding: 4px 0 10px;
   display: flex;
@@ -1244,9 +1254,6 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 .feed-header-actions { display: inline-flex; align-items: center; gap: 8px; }
 .feed-pane .tabs {
-  position: sticky;
-  top: 54px;
-  z-index: 2;
   background: #fff;
   padding-bottom: 8px;
 }
