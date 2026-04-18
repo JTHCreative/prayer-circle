@@ -3187,6 +3187,9 @@ button.friends-network-search-person-btn:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Sits above the top edge resize handle (z-index 2) so its click isn't
+     stolen by the invisible resize strip running along the top border. */
+  z-index: 3;
 }
 .pb-group-label:hover {
   background: var(--primary-soft);
