@@ -2987,6 +2987,17 @@ button.friends-network-search-person-btn:hover {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+  pointer-events: none;
+}
+/* Each control group is its own floating pill so there's clear visual
+   separation between mode, zoom, and filter. pointer-events are re-enabled
+   per-group since the bare toolbar itself doesn't need to catch clicks. */
+.pb-mode-group,
+.pb-filter-group,
+.pb-zoom-group {
+  display: inline-flex;
+  gap: 6px;
+  flex-wrap: wrap;
   padding: 6px 10px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.9);
@@ -2995,21 +3006,14 @@ button.friends-network-search-person-btn:hover {
   box-shadow: var(--shadow);
   pointer-events: auto;
 }
-.pb-mode-group,
-.pb-filter-group,
-.pb-zoom-group {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
 .pb-zoom {
   padding: 6px 10px;
   min-width: 34px;
   font-size: 13px;
   font-weight: 600;
   border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fff;
+  border: 1.5px solid transparent;
+  background: transparent;
   color: var(--text);
   box-shadow: none;
 }
