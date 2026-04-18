@@ -82,6 +82,12 @@ export default function Feed() {
                 getDocs(
                   query(
                     collection(db, 'prayers'),
+                    // visibility filter is required by the security rules:
+                    // without it, any non-circles doc whose circleIds happen
+                    // to overlap the user's circles would fail the rule and
+                    // Firestore rejects the whole query ("Missing or
+                    // insufficient permissions").
+                    where('visibility', '==', 'circles'),
                     where('circleIds', 'array-contains-any', group),
                     orderBy('createdAt', 'desc'),
                     limit(50)
@@ -117,6 +123,11 @@ export default function Feed() {
           await safeRun('friend', async () => {
             const q = query(
               collection(db, 'prayers'),
+              // Match the rule's friend branch exactly, same reason as
+              // above — without this filter the query can scan docs the
+              // current user can't read and Firestore denies the whole
+              // query.
+              where('visibility', '==', 'friend'),
               where('targetUserId', '==', user.uid),
               orderBy('createdAt', 'desc'),
               limit(50)

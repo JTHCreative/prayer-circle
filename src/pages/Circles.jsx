@@ -128,6 +128,10 @@ export default function Circles() {
           getDocs(
             query(
               collection(db, 'prayers'),
+              // visibility filter must be present so the query only scans
+              // docs the security rule allows — without it, Firestore
+              // rejects the whole query with "insufficient permissions".
+              where('visibility', '==', 'circles'),
               where('circleIds', 'array-contains-any', [selected.id]),
               orderBy('createdAt', 'desc')
             )
