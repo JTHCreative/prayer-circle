@@ -228,6 +228,74 @@ export default function Feed() {
     setPrayers((prev) => prev.filter((p) => p.id !== prayer.id));
   }
 
+  // Drag-to-scroll on the feed scroll container. Tracks pointer position;
+  // only engages once the pointer moves past a small threshold so that
+  // clicks on buttons/links inside the feed still work. If a drag actually
+  // occurred, the subsequent click is swallowed capture-phase so pressing
+  // + dragging over a card doesn't accidentally trigger its Pray button.
+  const scrollRef = useRef(null);
+  const dragRef = useRef(null);
+
+  function handleFeedPointerDown(e) {
+    if (e.button !== undefined && e.button !== 0) return;
+    // Don't try to drag when the user is grabbing a form control — let the
+    // browser's native select/caret behavior win.
+    if (e.target.closest('input, textarea, select, [contenteditable="true"]')) {
+      return;
+    }
+    const el = scrollRef.current;
+    if (!el) return;
+    dragRef.current = {
+      startY: e.clientY,
+      startScrollTop: el.scrollTop,
+      pointerId: e.pointerId,
+      dragging: false
+    };
+  }
+
+  function handleFeedPointerMove(e) {
+    const d = dragRef.current;
+    if (!d) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    const dy = e.clientY - d.startY;
+    if (!d.dragging && Math.abs(dy) > 5) {
+      d.dragging = true;
+      try {
+        el.setPointerCapture(d.pointerId);
+      } catch {}
+      el.classList.add('dragging');
+    }
+    if (d.dragging) {
+      el.scrollTop = d.startScrollTop - dy;
+    }
+  }
+
+  function handleFeedPointerUp() {
+    const d = dragRef.current;
+    if (!d) return;
+    const el = scrollRef.current;
+    try {
+      el?.releasePointerCapture?.(d.pointerId);
+    } catch {}
+    el?.classList.remove('dragging');
+    if (d.dragging) {
+      // Swallow the click that mouseUp would synthesize, so a drag that
+      // ended over a Pray button doesn't also trigger the button.
+      const suppress = (ev) => {
+        ev.stopPropagation();
+        ev.preventDefault();
+      };
+      el?.addEventListener('click', suppress, { capture: true, once: true });
+      // If no click actually fires (e.g. pointercancel), clean up soon.
+      setTimeout(
+        () => el?.removeEventListener('click', suppress, { capture: true }),
+        0
+      );
+    }
+    dragRef.current = null;
+  }
+
   return (
     <div className="home-split">
       <aside className={`feed-pane${collapsed ? ' collapsed' : ''}`}>
@@ -240,7 +308,15 @@ export default function Feed() {
         >
           <span className="sidebar-toggle-arrow">{collapsed ? '›' : '‹'}</span>
         </button>
-        <div className="feed-scroll" aria-hidden={collapsed}>
+        <div
+          ref={scrollRef}
+          className="feed-scroll"
+          aria-hidden={collapsed}
+          onPointerDown={handleFeedPointerDown}
+          onPointerMove={handleFeedPointerMove}
+          onPointerUp={handleFeedPointerUp}
+          onPointerCancel={handleFeedPointerUp}
+        >
           <DailyVerseCard />
           <div className="feed-header">
             <h1>Prayer Feed</h1>
