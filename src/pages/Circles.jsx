@@ -7,6 +7,7 @@ import {
   deleteDoc,
   doc,
   getDocs,
+  limit,
   orderBy,
   query,
   serverTimestamp,
@@ -118,16 +119,52 @@ export default function Circles() {
       }
 
       try {
-        const psnap = await getDocs(
-          query(
-            collection(db, 'prayers'),
-            where('circleIds', 'array-contains-any', [selected.id]),
-            orderBy('createdAt', 'desc')
+        // Pull prayers shared to this circle plus the user's own circles
+        // prayers, then dedupe + filter to ones that actually targeted
+        // this circle. The own-prayers branch is a safety net so a freshly
+        // posted prayer always appears even if the array-contains-any
+        // index is briefly stale or profile.circleIds drifted out of sync.
+        const [psnap, ownSnap] = await Promise.all([
+          getDocs(
+            query(
+              collection(db, 'prayers'),
+              where('circleIds', 'array-contains-any', [selected.id]),
+              orderBy('createdAt', 'desc')
+            )
+          ),
+          getDocs(
+            query(
+              collection(db, 'prayers'),
+              where('authorId', '==', user.uid),
+              orderBy('createdAt', 'desc'),
+              limit(50)
+            )
           )
-        );
+        ]);
         if (cancelled) return;
+        const seen = new Set();
         const prayers = [];
-        psnap.forEach((d) => prayers.push({ id: d.id, ...d.data() }));
+        psnap.forEach((d) => {
+          if (seen.has(d.id)) return;
+          seen.add(d.id);
+          prayers.push({ id: d.id, ...d.data() });
+        });
+        ownSnap.forEach((d) => {
+          if (seen.has(d.id)) return;
+          const data = d.data();
+          if (
+            data.visibility === 'circles' &&
+            (data.circleIds || []).includes(selected.id)
+          ) {
+            seen.add(d.id);
+            prayers.push({ id: d.id, ...data });
+          }
+        });
+        prayers.sort((a, b) => {
+          const ta = a.createdAt?.toMillis?.() ?? 0;
+          const tb = b.createdAt?.toMillis?.() ?? 0;
+          return tb - ta;
+        });
         setPanelPrayers(prayers);
       } catch (err) {
         // eslint-disable-next-line no-console

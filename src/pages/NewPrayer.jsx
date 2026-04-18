@@ -86,7 +86,7 @@ export default function NewPrayer() {
       const selectedCircles = circles.filter((c) => selectedCircleIds.includes(c.id));
       const targetFriend = friends.find((f) => f.id === targetUserId);
 
-      await addDoc(collection(db, 'prayers'), {
+      const ref = await addDoc(collection(db, 'prayers'), {
         text: text.trim(),
         authorId: user.uid,
         authorName: profile?.displayName ?? 'Anonymous',
@@ -106,8 +106,17 @@ export default function NewPrayer() {
         prayedCount: 0,
         createdAt: serverTimestamp()
       });
+      // eslint-disable-next-line no-console
+      console.log('[NewPrayer] saved', {
+        id: ref.id,
+        visibility,
+        circleIds: visibility === 'circles' ? selectedCircleIds : [],
+        targetUserId: visibility === 'friend' ? targetUserId : null
+      });
       navigate('/');
     } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[NewPrayer] save failed', err);
       setError(err.message);
     } finally {
       setBusy(false);
