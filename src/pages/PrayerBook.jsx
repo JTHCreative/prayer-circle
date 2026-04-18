@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   collection,
   deleteField,
@@ -253,20 +253,24 @@ export default function PrayerBook() {
     };
   }, [user?.uid, positions, groups]);
 
-  const filtered = useMemo(() => {
-    if (visibility === 'all') return entries;
-    return entries.filter((e) => e.visibility === visibility);
-  }, [entries, visibility]);
+  // A card "matches" the filter when its visibility is the selected filter,
+  // or when the filter is "all". Non-matching cards still render — they're
+  // just faded and non-interactive — so the user sees the whole book and
+  // keeps their spatial layout stable while filtering.
+  const matchesFilter = useCallback(
+    (entry) => visibility === 'all' || entry.visibility === visibility,
+    [visibility]
+  );
 
   // Seed a sensible position for any card we haven't placed yet. Walks a
   // simple grid inside the canvas and picks the first slot that doesn't
   // already have a card on it.
   useEffect(() => {
-    if (filtered.length === 0) return;
+    if (entries.length === 0) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    const needsSeeding = filtered.some((e) => !positions[e.id]);
+    const needsSeeding = entries.some((e) => !positions[e.id]);
     if (!needsSeeding) return;
 
     const colW = CARD_W + 24;
@@ -286,7 +290,7 @@ export default function PrayerBook() {
         const row = Math.round((p.y - startY) / rowH);
         taken.add(`${col},${row}`);
       }
-      for (const e of filtered) {
+      for (const e of entries) {
         if (next[e.id]) continue;
         let placed = false;
         for (let row = 0; row < 200 && !placed; row++) {
@@ -301,7 +305,7 @@ export default function PrayerBook() {
       }
       return next;
     });
-  }, [filtered, positions]);
+  }, [entries, positions]);
 
   // --- Card drag -----------------------------------------------------------
 
@@ -481,7 +485,7 @@ export default function PrayerBook() {
 
   function cardsInsideGroup(g) {
     const ids = [];
-    for (const entry of filtered) {
+    for (const entry of entries) {
       const p = positions[entry.id];
       if (!p) continue;
       const cx = p.x + CARD_W / 2;
@@ -958,10 +962,11 @@ export default function PrayerBook() {
             />
           )}
 
-          {filtered.map((entry) => {
+          {entries.map((entry) => {
             const pos = positions[entry.id];
             if (!pos) return null;
             const tilt = tiltFor(entry.id);
+            const muted = !matchesFilter(entry);
             return (
               <div
                 key={entry.id}
@@ -969,7 +974,8 @@ export default function PrayerBook() {
                   if (el) cardRefs.current[entry.id] = el;
                   else delete cardRefs.current[entry.id];
                 }}
-                className="pb-card-wrap"
+                className={`pb-card-wrap${muted ? ' is-muted' : ''}`}
+                aria-hidden={muted || undefined}
                 style={{
                   transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
                   '--pb-tilt': `${tilt}deg`

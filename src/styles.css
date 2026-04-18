@@ -3267,7 +3267,16 @@ button.friends-network-search-person-btn:hover {
   width: 360px;
   will-change: transform;
   cursor: grab;
-  transition: filter 140ms ease, box-shadow 140ms ease;
+  transition: opacity 160ms ease, filter 140ms ease, box-shadow 140ms ease;
+}
+/* Filtered-out cards stay in place so the spatial layout doesn't jump;
+   they just fade out and drop pointer-events so they can't be dragged,
+   Prayed, or otherwise interacted with. */
+.pb-card-wrap.is-muted {
+  opacity: 0.22;
+  filter: saturate(0.5);
+  pointer-events: none;
+  cursor: default;
 }
 .pb-card-wrap.dragging { cursor: grabbing; z-index: 20; }
 .pb-card-wrap.dragging .pb-card {
