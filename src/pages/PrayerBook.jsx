@@ -17,8 +17,8 @@ import { togglePraying } from '../utils/prayers.js';
 
 // Card footprint in the canvas. Used for auto-placement of new cards and
 // for the "is this card inside a group" hit-test.
-const CARD_W = 240;
-const CARD_H = 150;
+const CARD_W = 300;
+const CARD_H = 180;
 // Minimum size a dragged-out group must have to be kept.
 const GROUP_MIN = 80;
 
@@ -735,7 +735,7 @@ export default function PrayerBook() {
           <p className="muted">
             Every prayer you&rsquo;re praying for, laid out like a table.
             Drag to arrange, draw a group to cluster them, and tap{' '}
-            <strong>Prayed</strong> when you&rsquo;re done.
+            <strong>Pray</strong> when you&rsquo;re done.
           </p>
         </div>
       </div>

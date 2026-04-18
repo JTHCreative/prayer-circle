@@ -104,7 +104,7 @@ export default function PrayerBookCard({
           aria-label="Mark as prayed"
         >
           <PrayIcon size={14} />
-          <span>Prayed</span>
+          <span>Pray</span>
         </button>
       </div>
 

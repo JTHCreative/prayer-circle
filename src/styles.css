@@ -3251,7 +3251,7 @@ button.friends-network-search-person-btn:hover {
   position: absolute;
   left: 0;
   top: 0;
-  width: 240px;
+  width: 300px;
   will-change: transform;
   cursor: grab;
   transition: filter 140ms ease, box-shadow 140ms ease;
