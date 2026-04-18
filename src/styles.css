@@ -1190,12 +1190,14 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   min-height: 0;
 }
 /* Pinned region: verse card + header + tabs. Sits above .feed-scroll so
-   it stays put while the prayer list below scrolls on its own. */
+   it stays put while the prayer list below scrolls on its own. No
+   z-index here — flex items with z-index create a stacking context
+   (per the flexbox spec) and would paint over the ::after gradient
+   edge. */
 .feed-fixed {
   flex: 0 0 auto;
   padding: 20px 20px 0;
   background: #fff;
-  z-index: 2;
 }
 .feed-pane.collapsed .feed-fixed { display: none; }
 /* Blue -> purple gradient line along the right edge of the sidebar */
@@ -2546,33 +2548,32 @@ button.friends-network-search-person-btn:hover {
 }
 .np-particle {
   position: absolute;
-  bottom: -8px;
   border-radius: 999px;
   background: radial-gradient(
-    circle at 30% 30%,
+    circle,
     rgba(255, 255, 255, 1) 0%,
-    rgba(199, 210, 254, 0.85) 50%,
+    rgba(199, 210, 254, 0.9) 50%,
     rgba(167, 139, 250, 0) 100%
   );
   box-shadow:
-    0 0 8px rgba(167, 139, 250, 0.75),
-    0 0 18px rgba(99, 102, 241, 0.45);
-  animation-name: np-drift;
-  animation-timing-function: linear;
+    0 0 10px rgba(167, 139, 250, 0.9),
+    0 0 22px rgba(99, 102, 241, 0.55);
+  /* Each particle sits at its (top%, left%) and twinkles in place.
+     At any moment at least one speck is near its peak opacity, so the
+     layer reads as a quiet field of light, not a long drift cycle. */
+  opacity: 0.4;
+  animation-name: np-twinkle;
+  animation-timing-function: ease-in-out;
   animation-iteration-count: infinite;
-  will-change: transform, opacity;
+  animation-direction: alternate;
+  will-change: opacity, transform;
 }
-/* Animation rises within the container — keyframe distances are sized
-   so the particle is visible somewhere in the space at any moment. */
-@keyframes np-drift {
-  0%   { transform: translate3d(0, 0, 0);         opacity: 0; }
-  8%   { opacity: var(--np-peak, 0.8); }
-  50%  { transform: translate3d(10px, -340px, 0); }
-  92%  { opacity: var(--np-peak, 0.8); }
-  100% { transform: translate3d(-6px, -720px, 0); opacity: 0; }
+@keyframes np-twinkle {
+  0%   { opacity: 0.15; transform: translateY(0) scale(0.75); }
+  100% { opacity: var(--np-peak, 0.9); transform: translateY(-12px) scale(1.15); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .np-particle { animation: none; opacity: 0.3; }
+  .np-particle { animation: none; opacity: 0.4; }
 }
 .new-prayer-inner {
   max-width: 960px;
