@@ -3081,7 +3081,7 @@ button.friends-network-search-person-btn:hover {
      canvas pan so the dots feel glued to the content. */
   background-color: #eef3ff;
   background-image:
-    radial-gradient(circle, rgba(99, 102, 241, 0.28) 1.2px, transparent 1.8px),
+    radial-gradient(circle, rgba(99, 102, 241, 0.12) 0.8px, transparent 1.4px),
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
     linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
@@ -3132,9 +3132,9 @@ button.friends-network-search-person-btn:hover {
   position: absolute;
   left: 0;
   top: 0;
-  border: 2px dashed rgba(99, 102, 241, 0.4);
+  border: 1.5px solid rgba(99, 102, 241, 0.45);
   border-radius: 14px;
-  background: rgba(245, 240, 255, 0.5);
+  background: rgba(245, 240, 255, 0.88);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   pointer-events: auto;
   cursor: grab;
@@ -3193,7 +3193,7 @@ button.friends-network-search-person-btn:hover {
 .pb-group-draft {
   border-style: solid;
   border-color: rgba(139, 92, 246, 0.6);
-  background: rgba(235, 228, 255, 0.45);
+  background: rgba(235, 228, 255, 0.8);
   cursor: crosshair;
 }
 /* Label is a button so it can both show the group name and open the rename
