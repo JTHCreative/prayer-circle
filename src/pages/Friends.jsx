@@ -140,15 +140,51 @@ export default function Friends() {
         pointerId = null;
       }
     }
+
+    // Mirror the drag rubber-band on mouse wheel / trackpad scroll. Native
+    // scroll would sail past minScroll with no resistance; we intercept,
+    // apply the same 0.3 damping + snap-back on idle so the top row stays
+    // parked below the search bar at rest. Listener is non-passive so we
+    // can preventDefault the native scroll.
+    const WHEEL_OVERSHOOT_CAP = 120;
+    const WHEEL_IDLE_MS = 150;
+    let wheelIdleTimer = null;
+    function onWheel(e) {
+      // Ignore sideways trackpad swipes; we only clamp vertical motion.
+      if (!e.deltaY) return;
+      e.preventDefault();
+      const m = computeMinScroll();
+      const s = el.scrollTop;
+      const dy = e.deltaY;
+      let next = s + dy;
+      if (s < m && dy < 0) {
+        // Already in overshoot, wheeling further up — damp the delta.
+        next = s + dy * 0.3;
+      } else if (s >= m && next < m) {
+        // Crossing into overshoot this tick.
+        next = m - (m - next) * 0.3;
+      }
+      // Cap overshoot so repeated ticks don't accumulate past the margin.
+      if (next < m - WHEEL_OVERSHOOT_CAP) next = m - WHEEL_OVERSHOOT_CAP;
+      el.scrollTop = next;
+      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
+      wheelIdleTimer = setTimeout(() => {
+        if (el.scrollTop < m) el.scrollTo({ top: m, behavior: 'smooth' });
+      }, WHEEL_IDLE_MS);
+    }
+
     el.addEventListener('pointerdown', onDown);
     el.addEventListener('pointermove', onMove);
     el.addEventListener('pointerup', onUp);
     el.addEventListener('pointercancel', onUp);
+    el.addEventListener('wheel', onWheel, { passive: false });
     return () => {
       el.removeEventListener('pointerdown', onDown);
       el.removeEventListener('pointermove', onMove);
       el.removeEventListener('pointerup', onUp);
       el.removeEventListener('pointercancel', onUp);
+      el.removeEventListener('wheel', onWheel);
+      if (wheelIdleTimer) clearTimeout(wheelIdleTimer);
     };
   }, []);
 
