@@ -20,7 +20,7 @@ import { circleBubbleBackground } from '../utils/circleGradients.js';
 const VISIBILITY_OPTIONS = [
   { key: 'public', label: 'Public', Icon: PublicIcon, helper: 'Shared with your region on the globe.' },
   { key: 'circles', label: 'My Circles', Icon: CircleVisibilityIcon, helper: 'Only the prayer circles you pick.' },
-  { key: 'friend', label: 'One Friend', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
+  { key: 'friend', label: 'Private', Icon: PersonIcon, helper: 'Sent directly to one friend.' }
 ];
 
 export default function NewPrayer() {

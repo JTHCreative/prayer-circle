@@ -22,7 +22,7 @@ const TABS = [
   { key: 'all', label: 'All' },
   { key: 'public', label: 'Public' },
   { key: 'circles', label: 'My circles' },
-  { key: 'friend', label: 'For me' },
+  { key: 'friend', label: 'Private' },
   { key: 'mine', label: 'My posts' }
 ];
 
@@ -85,6 +85,27 @@ export default function Feed() {
             limit(50)
           );
           pushAll(await getDocs(q));
+        }
+        // Private-tab second pass: also include private prayers the user
+        // authored (they're the sender, not the recipient, so the
+        // targetUserId query above misses them). Reuses the existing
+        // [authorId, createdAt] composite index and filters client-side
+        // so we don't need a new visibility+authorId index.
+        if (tab === 'friend') {
+          const q = query(
+            collection(db, 'prayers'),
+            where('authorId', '==', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(50)
+          );
+          const snap = await getDocs(q);
+          snap.forEach((d) => {
+            const data = d.data();
+            if (data.visibility === 'friend' && !seen.has(d.id)) {
+              seen.add(d.id);
+              results.push({ id: d.id, ...data });
+            }
+          });
         }
         if (tab === 'all' || tab === 'mine') {
           const q = query(
