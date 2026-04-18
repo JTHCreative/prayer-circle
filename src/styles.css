@@ -3123,6 +3123,43 @@ button.friends-network-search-person-btn:hover {
     inset 0 0 0 1px rgba(255, 255, 255, 0.6),
     0 14px 30px rgba(99, 102, 241, 0.22);
 }
+
+/* Resize anchors — invisible hit areas along the border, with a small
+   visible knob on corners that fades in on group hover. Edge handles stay
+   invisible (pure hit area) so the dashed border reads cleanly. */
+.pb-group-handle {
+  position: absolute;
+  z-index: 2;
+}
+.pb-group-handle-n,
+.pb-group-handle-s { left: 10px; right: 10px; height: 10px; cursor: ns-resize; }
+.pb-group-handle-n { top: -5px; }
+.pb-group-handle-s { bottom: -5px; }
+.pb-group-handle-e,
+.pb-group-handle-w { top: 10px; bottom: 10px; width: 10px; cursor: ew-resize; }
+.pb-group-handle-e { right: -5px; }
+.pb-group-handle-w { left: -5px; }
+.pb-group-handle-nw,
+.pb-group-handle-ne,
+.pb-group-handle-sw,
+.pb-group-handle-se {
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border: 1.5px solid rgba(139, 92, 246, 0.7);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(99, 102, 241, 0.28);
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+.pb-group-handle-nw { top: -7px; left: -7px; cursor: nwse-resize; }
+.pb-group-handle-se { bottom: -7px; right: -7px; cursor: nwse-resize; }
+.pb-group-handle-ne { top: -7px; right: -7px; cursor: nesw-resize; }
+.pb-group-handle-sw { bottom: -7px; left: -7px; cursor: nesw-resize; }
+.pb-group:hover .pb-group-handle-nw,
+.pb-group:hover .pb-group-handle-ne,
+.pb-group:hover .pb-group-handle-sw,
+.pb-group:hover .pb-group-handle-se { opacity: 1; }
 .pb-group-draft {
   border-style: solid;
   border-color: rgba(139, 92, 246, 0.6);

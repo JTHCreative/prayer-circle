@@ -127,6 +127,7 @@ export default function PrayerBook() {
   const dragRef = useRef(null); // { id, offsetX, offsetY, moved }
   const drawRef = useRef(null); // { startX, startY }
   const groupDragRef = useRef(null); // group + attached card drag state
+  const resizeRef = useRef(null); // group resize state
   const panRef = useRef(null); // canvas pan state
   const togglingRef = useRef(new Set());
   // Blocks the save effect until the initial load has hydrated state —
@@ -533,6 +534,90 @@ export default function PrayerBook() {
     groupDragRef.current = null;
   }
 
+  // --- Group resize (drag handles on border) ------------------------------
+
+  // GROUP_MIN is also used as the floor on resize so users can't collapse a
+  // region to an unclickable sliver.
+  function handleResizePointerDown(e, g, dir) {
+    if (mode !== 'move') return;
+    if (e.button !== undefined && e.button !== 0) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    resizeRef.current = {
+      id: g.id,
+      dir,
+      startPtX: e.clientX - rect.left - viewport.x,
+      startPtY: e.clientY - rect.top - viewport.y,
+      startX: g.x,
+      startY: g.y,
+      startW: g.w,
+      startH: g.h,
+      moved: false
+    };
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {}
+    // Stop the handle's pointerdown from bubbling into the group's own
+    // drag-to-move handler.
+    e.stopPropagation();
+  }
+
+  function handleResizePointerMove(e) {
+    const r = resizeRef.current;
+    if (!r) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const ptX = e.clientX - rect.left - viewport.x;
+    const ptY = e.clientY - rect.top - viewport.y;
+    const dx = ptX - r.startPtX;
+    const dy = ptY - r.startPtY;
+    let x = r.startX;
+    let y = r.startY;
+    let w = r.startW;
+    let h = r.startH;
+    if (r.dir.includes('e')) w = Math.max(GROUP_MIN, r.startW + dx);
+    if (r.dir.includes('s')) h = Math.max(GROUP_MIN, r.startH + dy);
+    if (r.dir.includes('w')) {
+      // Resizing from the left edge: shift x and shrink/grow w by the same
+      // delta, but cap x so w never drops below the min.
+      const maxDx = r.startW - GROUP_MIN;
+      const ddx = Math.min(dx, maxDx);
+      x = r.startX + ddx;
+      w = r.startW - ddx;
+    }
+    if (r.dir.includes('n')) {
+      const maxDy = r.startH - GROUP_MIN;
+      const ddy = Math.min(dy, maxDy);
+      y = r.startY + ddy;
+      h = r.startH - ddy;
+    }
+    r.moved = true;
+    r.lastRect = { x, y, w, h };
+    const el = groupRefs.current[r.id];
+    if (el) {
+      el.style.transform = `translate(${x}px, ${y}px)`;
+      el.style.width = `${w}px`;
+      el.style.height = `${h}px`;
+    }
+  }
+
+  function handleResizePointerUp(e) {
+    const r = resizeRef.current;
+    if (!r) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    if (r.moved && r.lastRect) {
+      const { id, lastRect } = r;
+      setGroups((prev) =>
+        prev.map((g) => (g.id === id ? { ...g, ...lastRect } : g))
+      );
+    }
+    resizeRef.current = null;
+  }
+
   function removeGroup(id) {
     setGroups((prev) => prev.filter((g) => g.id !== id));
   }
@@ -683,6 +768,16 @@ export default function PrayerBook() {
               >
                 ×
               </button>
+              {['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'].map((dir) => (
+                <div
+                  key={dir}
+                  className={`pb-group-handle pb-group-handle-${dir}`}
+                  onPointerDown={(e) => handleResizePointerDown(e, g, dir)}
+                  onPointerMove={handleResizePointerMove}
+                  onPointerUp={handleResizePointerUp}
+                  onPointerCancel={handleResizePointerUp}
+                />
+              ))}
             </div>
           ))}
 
