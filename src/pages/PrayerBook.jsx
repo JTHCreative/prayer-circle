@@ -30,13 +30,23 @@ function gradientForGroup(g) {
   );
 }
 // Border-image + padding-box trick so rounded corners work with a gradient
-// border. The first linear-gradient paints the solid translucent fill; the
-// second paints the gradient that shows through the 1.5px border gap.
+// border. The first linear-gradient paints the translucent fill; the
+// second paints the gradient that shows through the border gap.
 function groupBorderStyle(g) {
   const theme = gradientForGroup(g);
   return {
     background:
       'linear-gradient(rgba(245, 240, 255, 0.88), rgba(245, 240, 255, 0.88)) padding-box, ' +
+      `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
+    borderColor: 'transparent'
+  };
+}
+// Same trick for the floating name pill so its border matches the group.
+function groupLabelStyle(g) {
+  const theme = gradientForGroup(g);
+  return {
+    background:
+      'linear-gradient(#fff, #fff) padding-box, ' +
       `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
     borderColor: 'transparent'
   };
@@ -893,6 +903,7 @@ export default function PrayerBook() {
               <button
                 type="button"
                 className="pb-group-label"
+                style={groupLabelStyle(g)}
                 onClick={(e) => {
                   e.stopPropagation();
                   setEditingGroup({
