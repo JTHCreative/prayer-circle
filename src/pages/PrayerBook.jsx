@@ -718,14 +718,14 @@ export default function PrayerBook() {
     setViewport(nextV);
   }
 
-  // Wheel listener has to be attached natively so we can preventDefault on
-  // ctrl+wheel (browsers map that to page zoom by default, and React's
-  // synthetic wheel is passive so preventDefault would be ignored).
+  // Wheel listener has to be attached natively so we can preventDefault
+  // (React's synthetic wheel is passive so preventDefault would be
+  // ignored). Any wheel event inside the canvas zooms instead of scrolling
+  // the page — matches the feel of a canvas app like Figma or Miro.
   useEffect(() => {
     const el = canvasRef.current;
     if (!el) return;
     function onWheel(e) {
-      if (!e.ctrlKey && !e.metaKey) return;
       e.preventDefault();
       const rect = el.getBoundingClientRect();
       const ax = e.clientX - rect.left;
@@ -1010,7 +1010,7 @@ export default function PrayerBook() {
         <div className="pb-canvas-hint" aria-hidden="true">
           {mode === 'group'
             ? 'Drag on empty canvas to draw a group area'
-            : 'Drag cards · drag a group to move its cards · drag empty canvas to pan · ctrl + scroll to zoom'}
+            : 'Drag cards · drag a group to move its cards · drag empty canvas to pan · scroll to zoom'}
         </div>
       </div>
 
