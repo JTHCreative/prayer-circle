@@ -24,25 +24,26 @@ const VISIBILITY_OPTIONS = [
 ];
 
 // Fixed particle field (no randomness on each render so the positions
-// don't reshuffle when React re-renders the page). Each particle picks a
-// column, size, fade, and drift cycle; the CSS keyframe handles motion.
+// don't reshuffle when React re-renders the page). Each particle picks
+// a left%, top%, size, duration, and delay; the CSS keyframe handles a
+// gentle twinkle-in-place so every speck is visible at any given moment.
 const NP_PARTICLES = [
-  { left: 6,  size: 3, delay: 0,    duration: 14, opacity: 0.55 },
-  { left: 14, size: 2, delay: 3,    duration: 18, opacity: 0.45 },
-  { left: 22, size: 4, delay: 6,    duration: 16, opacity: 0.6  },
-  { left: 31, size: 2, delay: 1.5,  duration: 20, opacity: 0.4  },
-  { left: 39, size: 3, delay: 8,    duration: 15, opacity: 0.5  },
-  { left: 47, size: 2, delay: 4,    duration: 19, opacity: 0.45 },
-  { left: 55, size: 4, delay: 10,   duration: 13, opacity: 0.55 },
-  { left: 63, size: 2, delay: 2,    duration: 17, opacity: 0.4  },
-  { left: 71, size: 3, delay: 7,    duration: 21, opacity: 0.5  },
-  { left: 79, size: 2, delay: 11,   duration: 16, opacity: 0.45 },
-  { left: 87, size: 4, delay: 5,    duration: 14, opacity: 0.6  },
-  { left: 94, size: 2, delay: 9,    duration: 22, opacity: 0.4  },
-  { left: 18, size: 2, delay: 12.5, duration: 18, opacity: 0.35 },
-  { left: 51, size: 2, delay: 0.5,  duration: 24, opacity: 0.35 },
-  { left: 75, size: 3, delay: 13,   duration: 15, opacity: 0.5  },
-  { left: 10, size: 2, delay: 4.5,  duration: 23, opacity: 0.3  }
+  { left:  6, top: 82, size: 3, delay: 0,    duration: 4.2, peak: 0.9  },
+  { left: 14, top: 18, size: 2, delay: 1.5,  duration: 5.0, peak: 0.75 },
+  { left: 22, top: 64, size: 4, delay: 0.4,  duration: 4.6, peak: 1    },
+  { left: 31, top: 36, size: 2, delay: 2.3,  duration: 5.4, peak: 0.7  },
+  { left: 39, top: 90, size: 3, delay: 0.9,  duration: 3.8, peak: 0.85 },
+  { left: 47, top: 12, size: 2, delay: 1.1,  duration: 5.6, peak: 0.7  },
+  { left: 55, top: 72, size: 4, delay: 2.0,  duration: 4.2, peak: 0.95 },
+  { left: 63, top: 28, size: 2, delay: 0.3,  duration: 5.0, peak: 0.75 },
+  { left: 71, top: 58, size: 3, delay: 1.8,  duration: 4.4, peak: 0.9  },
+  { left: 79, top: 8,  size: 2, delay: 2.6,  duration: 5.2, peak: 0.7  },
+  { left: 87, top: 48, size: 4, delay: 0.6,  duration: 3.9, peak: 1    },
+  { left: 94, top: 76, size: 2, delay: 1.3,  duration: 5.8, peak: 0.7  },
+  { left: 18, top: 42, size: 2, delay: 3.2,  duration: 4.8, peak: 0.65 },
+  { left: 51, top: 50, size: 2, delay: 0.7,  duration: 6.0, peak: 0.65 },
+  { left: 75, top: 88, size: 3, delay: 2.4,  duration: 4.2, peak: 0.9  },
+  { left: 10, top: 30, size: 2, delay: 1.9,  duration: 5.4, peak: 0.6  }
 ];
 
 export default function NewPrayer() {
@@ -166,11 +167,12 @@ export default function NewPrayer() {
               className="np-particle"
               style={{
                 left: `${p.left}%`,
+                top: `${p.top}%`,
                 width: `${p.size}px`,
                 height: `${p.size}px`,
                 animationDelay: `${p.delay}s`,
                 animationDuration: `${p.duration}s`,
-                '--np-peak': p.opacity
+                '--np-peak': p.peak
               }}
             />
           ))}
