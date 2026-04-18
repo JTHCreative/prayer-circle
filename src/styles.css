@@ -2996,10 +2996,35 @@ button.friends-network-search-person-btn:hover {
   pointer-events: auto;
 }
 .pb-mode-group,
-.pb-filter-group {
+.pb-filter-group,
+.pb-zoom-group {
   display: inline-flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+.pb-zoom {
+  padding: 6px 10px;
+  min-width: 34px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: #fff;
+  color: var(--text);
+  box-shadow: none;
+}
+.pb-zoom:hover {
+  background: var(--primary-soft);
+  transform: none;
+  box-shadow: none;
+}
+.pb-zoom:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.pb-zoom-reset {
+  min-width: 52px;
+  font-variant-numeric: tabular-nums;
 }
 .pb-mode,
 .pb-filter {
@@ -3041,6 +3066,7 @@ button.friends-network-search-person-btn:hover {
 .pb-canvas {
   --pb-dot-x: 0px;
   --pb-dot-y: 0px;
+  --pb-dot-size: 22px;
   position: relative;
   flex: 1;
   min-height: 520px;
@@ -3055,7 +3081,7 @@ button.friends-network-search-person-btn:hover {
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
     radial-gradient(circle at 80% 80%, rgba(168, 85, 247, 0.08) 0%, transparent 50%),
     linear-gradient(160deg, #eef3ff 0%, #f5f0ff 100%);
-  background-size: 22px 22px, auto, auto, auto;
+  background-size: var(--pb-dot-size) var(--pb-dot-size), auto, auto, auto;
   background-position:
     var(--pb-dot-x) var(--pb-dot-y),
     0 0,
@@ -3187,6 +3213,9 @@ button.friends-network-search-person-btn:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  /* Sits above the top edge resize handle (z-index 2) so its click isn't
+     stolen by the invisible resize strip running along the top border. */
+  z-index: 3;
 }
 .pb-group-label:hover {
   background: var(--primary-soft);
