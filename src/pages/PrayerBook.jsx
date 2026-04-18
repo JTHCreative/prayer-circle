@@ -17,8 +17,8 @@ import { togglePraying } from '../utils/prayers.js';
 
 // Card footprint in the canvas. Used for auto-placement of new cards and
 // for the "is this card inside a group" hit-test.
-const CARD_W = 300;
-const CARD_H = 180;
+const CARD_W = 360;
+const CARD_H = 220;
 // Minimum size a dragged-out group must have to be kept.
 const GROUP_MIN = 80;
 
