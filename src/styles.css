@@ -2221,6 +2221,57 @@ button.friends-network-search-person-btn:hover {
   z-index: 6;
 }
 
+/* Top-right "Jump to circle" dropdown on the Circles interactive space.
+   Sits above the floating bubbles so it never gets covered by a circle
+   drifting by. Uses a native <select> (accessibility comes for free) but
+   styles the trigger as a translucent pill with a custom caret so it
+   blends with the rest of the floating toolbars on this page. */
+.circle-space-picker {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.circle-space-picker-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0 4px 0 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  /* Override the app's default input chrome (which adds 1.5px border +
+     9px padding) so the select lies flush inside the pill. */
+  width: auto;
+  height: auto;
+  line-height: 1.2;
+  box-shadow: none;
+}
+.circle-space-picker-select:focus { outline: none; }
+.circle-space-picker:focus-within {
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.24), 0 0 0 2px rgba(139, 92, 246, 0.35);
+}
+.circle-space-picker-caret { color: var(--muted); flex-shrink: 0; }
+
 /* Custom pill-based sort picker. The trigger shows the current choice
    as a "Sort by <value>" pill with the asc/desc button joined to the
    right; clicking the main area reveals the option pills below. */
