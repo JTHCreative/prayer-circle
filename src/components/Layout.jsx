@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Avatar from './Avatar.jsx';
 import NotificationsMenu from './NotificationsMenu.jsx';
 import { BookIcon, CircleVisibilityIcon, PublicIcon } from './icons.jsx';
-import logoUrl from '../assets/prayer-circle-logo.png';
+import logoUrl from '../assets/prayer-circle-logo-full.png';
 
 function IconNewPrayer() {
   return (
@@ -59,9 +59,8 @@ export default function Layout() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link to="/" className="brand">
-          <img src={logoUrl} alt="" className="brand-logo" aria-hidden="true" />
-          <span>Prayer Circle</span>
+        <Link to="/" className="brand" aria-label="Prayer Circle home">
+          <img src={logoUrl} alt="Prayer Circle" className="brand-logo" />
         </Link>
         <nav className="nav">
           <NavLink to="/new" className="nav-btn nav-btn-primary">
