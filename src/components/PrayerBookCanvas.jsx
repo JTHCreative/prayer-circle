@@ -30,13 +30,16 @@ function gradientForGroup(g) {
   );
 }
 // Border-image + padding-box trick so rounded corners work with a gradient
-// border. The first linear-gradient paints the translucent fill; the
-// second paints the gradient that shows through the border gap.
+// border. The first linear-gradient paints the interior fill; the second
+// paints the gradient that shows through the border gap. The interior
+// is a fixed near-white — only the border color is user-editable, and
+// white sits neutrally against every palette (warm, cool, or gray).
+const GROUP_INTERIOR = 'rgba(255, 255, 255, 0.82)';
 function groupBorderStyle(g) {
   const theme = gradientForGroup(g);
   return {
     background:
-      'linear-gradient(rgba(245, 240, 255, 0.88), rgba(245, 240, 255, 0.88)) padding-box, ' +
+      `linear-gradient(${GROUP_INTERIOR}, ${GROUP_INTERIOR}) padding-box, ` +
       `linear-gradient(135deg, ${theme.from}, ${theme.to}) border-box`,
     borderColor: 'transparent'
   };

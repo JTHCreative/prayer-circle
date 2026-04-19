@@ -3320,7 +3320,7 @@ button.friends-network-search-person-btn:hover {
   top: 0;
   border: 3.5px solid rgba(99, 102, 241, 0.45);
   border-radius: 14px;
-  background: rgba(245, 240, 255, 0.88);
+  background: rgba(255, 255, 255, 0.82);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   pointer-events: auto;
   cursor: grab;
