@@ -4,7 +4,7 @@ import {
   deleteField,
   doc,
   getDoc,
-  getDocs,
+  onSnapshot,
   orderBy,
   query,
   setDoc,
@@ -152,28 +152,63 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
   const layoutReadyRef = useRef(false);
   const saveTimerRef = useRef(null);
 
+  // IDs that just showed up since the last snapshot — drives a one-shot
+  // "pop" animation so the user notices when a freshly-prayed card lands on
+  // the canvas (e.g. after tapping Pray in the feed sidebar).
+  const [poppingIds, setPoppingIds] = useState(() => new Set());
+  const knownIdsRef = useRef(null);
+
   useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      if (!user?.uid) return;
-      setLoading(true);
-      try {
-        const q = query(
-          collection(db, 'users', user.uid, 'prayerBook'),
-          orderBy('addedAt', 'desc')
-        );
-        const snap = await getDocs(q);
+    if (!user?.uid) return;
+    knownIdsRef.current = null;
+    setLoading(true);
+    const q = query(
+      collection(db, 'users', user.uid, 'prayerBook'),
+      orderBy('addedAt', 'desc')
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
         const rows = [];
         snap.forEach((d) => rows.push({ id: d.id, ...d.data() }));
-        if (!cancelled) setEntries(rows);
-      } finally {
-        if (!cancelled) setLoading(false);
+        const ids = new Set(rows.map((r) => r.id));
+        // First snapshot just seeds the known-set — no cards should pop on
+        // the initial page load, only ones that arrive afterwards.
+        if (knownIdsRef.current === null) {
+          knownIdsRef.current = ids;
+        } else {
+          const added = [];
+          for (const id of ids) {
+            if (!knownIdsRef.current.has(id)) added.push(id);
+          }
+          knownIdsRef.current = ids;
+          if (added.length > 0) {
+            setPoppingIds((prev) => {
+              const next = new Set(prev);
+              for (const id of added) next.add(id);
+              return next;
+            });
+            // Animation is ~600ms; clear the flag a beat later so a re-pray
+            // in the same session pops again.
+            setTimeout(() => {
+              setPoppingIds((prev) => {
+                const next = new Set(prev);
+                for (const id of added) next.delete(id);
+                return next;
+              });
+            }, 800);
+          }
+        }
+        setEntries(rows);
+        setLoading(false);
+      },
+      (err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to subscribe to prayer book', err);
+        setLoading(false);
       }
-    }
-    load();
-    return () => {
-      cancelled = true;
-    };
+    );
+    return unsub;
   }, [user?.uid]);
 
   useEffect(() => {
@@ -884,7 +919,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                   if (el) cardRefs.current[entry.id] = el;
                   else delete cardRefs.current[entry.id];
                 }}
-                className={`pb-card-wrap${muted ? ' is-muted' : ''}`}
+                className={`pb-card-wrap${muted ? ' is-muted' : ''}${poppingIds.has(entry.id) ? ' is-popping' : ''}`}
                 aria-hidden={muted || undefined}
                 style={{
                   transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
