@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext.jsx';
+import logoUrl from '../assets/prayer-circle-logo.png';
 
 export default function Login() {
   const { login } = useAuth();
@@ -30,7 +31,11 @@ export default function Login() {
 
   return (
     <div className="auth-card">
-      <h1>Log in</h1>
+      <div className="auth-brand">
+        <img src={logoUrl} alt="" className="auth-logo" aria-hidden="true" />
+        <h1>Prayer Circle</h1>
+        <p className="auth-tagline">Welcome back — log in to keep praying.</p>
+      </div>
       <form onSubmit={handleSubmit}>
         <label>
           Email

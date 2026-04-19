@@ -558,6 +558,17 @@ export default function Circles() {
     setEditing(null);
   }
 
+  // Sorted list for the top-right "Jump to…" dropdown — alphabetical so
+  // circles are easy to scan. Memoized so re-renders from physics ticks
+  // don't re-sort on every frame.
+  const sortedCircles = useMemo(
+    () =>
+      [...circles].sort((a, b) =>
+        (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
+      ),
+    [circles]
+  );
+
   return (
     <div className="circle-universe">
       <div className="circle-universe-header">
@@ -581,6 +592,40 @@ export default function Circles() {
           if (selected && e.target === e.currentTarget) setSelected(null);
         }}
       >
+        {sortedCircles.length > 0 && (
+          <div className="circle-space-picker" aria-label="Jump to circle">
+            <select
+              className="circle-space-picker-select"
+              value={selected?.id || ''}
+              onChange={(e) => {
+                const next = circles.find((c) => c.id === e.target.value);
+                if (next) setSelected(next);
+              }}
+              aria-label="Select a circle"
+            >
+              <option value="" disabled>
+                Jump to circle…
+              </option>
+              {sortedCircles.map((c) => {
+                const count = (c.members || []).length;
+                return (
+                  <option key={c.id} value={c.id}>
+                    {c.name} · {count} {count === 1 ? 'member' : 'members'}
+                  </option>
+                );
+              })}
+            </select>
+            <svg
+              className="circle-space-picker-caret"
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              aria-hidden="true"
+            >
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        )}
         {loading && <p className="muted center-abs">Loading circles…</p>}
         {!loading && circles.length === 0 && (
           <p className="muted center-abs">
