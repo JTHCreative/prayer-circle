@@ -2595,9 +2595,9 @@ button.friends-network-search-person-btn:hover {
   flex: 1;
   min-height: 520px;
   border-radius: 18px;
-  /* Scrolling now lives on .new-prayer-scroll so the particle layer can
-     sit pinned behind the content regardless of scroll position. */
-  overflow: hidden;
+  /* No inner scroll — the page container (.container) handles overflow so
+     the whole window extends as more cards (friend picker, circle picker)
+     appear, rather than squeezing them into a nested scroll region. */
   border: 1px solid var(--border);
   background:
     radial-gradient(circle at 20% 15%, rgba(99, 102, 241, 0.10) 0%, transparent 40%),
@@ -2606,9 +2606,7 @@ button.friends-network-search-person-btn:hover {
   box-shadow: inset 0 0 60px rgba(99, 102, 241, 0.06);
 }
 .new-prayer-scroll {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
+  position: relative;
   z-index: 1;
 }
 
@@ -3322,7 +3320,7 @@ button.friends-network-search-person-btn:hover {
   top: 0;
   border: 3.5px solid rgba(99, 102, 241, 0.45);
   border-radius: 14px;
-  background: rgba(245, 240, 255, 0.88);
+  background: rgba(255, 255, 255, 0.82);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6);
   pointer-events: auto;
   cursor: grab;
@@ -3422,30 +3420,56 @@ button.friends-network-search-person-btn:hover {
   transform: none;
   box-shadow: var(--shadow);
 }
+/* Group action buttons — the edit/delete pair in the top-right corner of a
+   group region. Styled to match the app's action-button theme: a gradient
+   border (blue→purple for edit, red→orange for delete) ringing a white
+   fill, so they read as part of the same family as the feed's Pray / trash
+   buttons and the friends-network request pills. */
 .pb-group-remove,
 .pb-group-edit {
   position: absolute;
   top: 6px;
-  width: 22px;
-  height: 22px;
+  width: 30px;
+  height: 30px;
   padding: 0;
-  font-size: 14px;
   line-height: 1;
-  background: #fff;
-  border: 1px solid var(--border);
-  color: var(--muted);
+  border: 2px solid transparent;
   border-radius: 999px;
-  box-shadow: var(--shadow);
   opacity: 0;
-  transition: opacity 140ms ease, color 140ms ease;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  transition: opacity 140ms ease, transform 120ms ease, box-shadow 180ms ease;
 }
-.pb-group-remove { right: 6px; }
-.pb-group-edit { right: 34px; }
-.pb-group-edit:hover { color: var(--primary); }
+.pb-group-edit {
+  right: 42px;
+  color: #4f46e5;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient) border-box;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.18);
+}
+.pb-group-edit:hover {
+  color: #4338ca;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(79, 70, 229, 0.28), 0 0 8px rgba(139, 92, 246, 0.2);
+}
+.pb-group-remove {
+  right: 6px;
+  color: #dc2626;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    var(--btn-gradient-danger) border-box;
+  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
+}
+.pb-group-remove:hover {
+  color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(239, 68, 68, 0.3), 0 0 8px rgba(249, 115, 22, 0.22);
+}
+.pb-group-remove svg,
+.pb-group-edit svg { width: 14px; height: 14px; display: block; }
 .pb-group:hover .pb-group-remove,
 .pb-group:hover .pb-group-edit { opacity: 1; }
 

@@ -22,9 +22,9 @@ import { chunk } from '../utils/arrays.js';
 const TABS = [
   { key: 'all', label: 'All' },
   { key: 'public', label: 'Public' },
-  { key: 'circles', label: 'My circles' },
+  { key: 'circles', label: 'My Circles' },
   { key: 'friend', label: 'Private' },
-  { key: 'mine', label: 'My posts' }
+  { key: 'mine', label: 'My Requests' }
 ];
 
 export default function Feed() {
