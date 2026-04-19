@@ -151,20 +151,20 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 .brand {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  font-weight: 700;
-  font-size: 18px;
-  color: var(--primary);
   text-decoration: none;
+  /* The full lockup has the wordmark baked into the image, so the link
+     itself doesn't render any text — but keep the gradient color in case
+     a fallback aria-label is shown by assistive tech. */
+  color: var(--primary);
 }
 .brand:hover { text-decoration: none; }
 .brand-logo {
-  width: 32px;
-  height: 32px;
+  height: 40px;
+  width: auto;
+  display: block;
   object-fit: contain;
-  /* PNG has a small transparent halo around the doves — a subtle drop
-     shadow adds just enough depth to match the rest of the nav without
-     looking like a photograph pasted into the bar. */
+  /* Drop shadow gives the gradient lockup a touch of depth so it doesn't
+     look like a sticker pasted onto the white topbar. */
   filter: drop-shadow(0 1px 2px rgba(99, 102, 241, 0.18));
 }
 .nav { display: flex; gap: 10px; flex: 1; align-items: center; }
@@ -266,22 +266,17 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
 }
 .auth-card h1 { margin-top: 0; }
 
-/* Branded header above the auth form — logo + wordmark + one-line
-   invitation. Centered because the card is narrow and the brand is the
-   first thing a new/returning user lands on. */
+/* Branded header above the auth form — full dove-wreath + wordmark
+   lockup with a one-line invitation underneath. Centered because the
+   card is narrow and the brand is the first thing a new/returning user
+   lands on. */
 .auth-brand {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   margin-bottom: 18px;
   text-align: center;
-}
-.auth-brand h1 {
-  margin: 0;
-  font-size: 22px;
-  color: var(--primary);
-  letter-spacing: 0.01em;
 }
 .auth-tagline {
   margin: 0;
@@ -289,11 +284,11 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   font-size: 13px;
 }
 .auth-logo {
-  width: 96px;
-  height: 96px;
+  width: 100%;
+  max-width: 320px;
+  height: auto;
   object-fit: contain;
-  margin-bottom: 4px;
-  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.2));
+  filter: drop-shadow(0 4px 12px rgba(99, 102, 241, 0.18));
 }
 
 .feed-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
@@ -2220,6 +2215,57 @@ button.friends-network-search-person-btn:hover {
   left: 18px;
   z-index: 6;
 }
+
+/* Top-right "Jump to circle" dropdown on the Circles interactive space.
+   Sits above the floating bubbles so it never gets covered by a circle
+   drifting by. Uses a native <select> (accessibility comes for free) but
+   styles the trigger as a translucent pill with a custom caret so it
+   blends with the rest of the floating toolbars on this page. */
+.circle-space-picker {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 6;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(79, 70, 229, 0.12);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+}
+.circle-space-picker-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background: transparent;
+  border: none;
+  padding: 0 4px 0 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  max-width: 220px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+  /* Override the app's default input chrome (which adds 1.5px border +
+     9px padding) so the select lies flush inside the pill. */
+  width: auto;
+  height: auto;
+  line-height: 1.2;
+  box-shadow: none;
+}
+.circle-space-picker-select:focus { outline: none; }
+.circle-space-picker:focus-within {
+  box-shadow: 0 6px 20px rgba(79, 70, 229, 0.24), 0 0 0 2px rgba(139, 92, 246, 0.35);
+}
+.circle-space-picker-caret { color: var(--muted); flex-shrink: 0; }
 
 /* Custom pill-based sort picker. The trigger shows the current choice
    as a "Sort by <value>" pill with the asc/desc button joined to the

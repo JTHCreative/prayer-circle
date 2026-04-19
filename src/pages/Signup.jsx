@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BIO_MAX, useAuth } from '../context/AuthContext.jsx';
 import LocationSelect from '../components/LocationSelect.jsx';
-import logoUrl from '../assets/prayer-circle-logo.png';
+import logoUrl from '../assets/prayer-circle-logo-full.png';
 
 export default function Signup() {
   const { signup } = useAuth();
@@ -42,8 +42,7 @@ export default function Signup() {
   return (
     <div className="auth-card">
       <div className="auth-brand">
-        <img src={logoUrl} alt="" className="auth-logo" aria-hidden="true" />
-        <h1>Prayer Circle</h1>
+        <img src={logoUrl} alt="Prayer Circle" className="auth-logo" />
         <p className="auth-tagline">Create your account and join the circle.</p>
       </div>
       <form onSubmit={handleSubmit}>
