@@ -3223,6 +3223,12 @@ button.friends-network-search-person-btn:hover {
   color: var(--text);
   box-shadow: none;
 }
+.pb-mode {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.pb-mode-icon { flex-shrink: 0; }
 .pb-mode:hover,
 .pb-filter:hover {
   transform: none;

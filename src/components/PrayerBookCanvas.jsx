@@ -743,14 +743,44 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
               className={`pb-mode${mode === 'move' ? ' active' : ''}`}
               onClick={() => setMode('move')}
             >
-              Move
+              <svg
+                className="pb-mode-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                {/* Pointing hand: palm + index finger up, thumb tucked. */}
+                <path
+                  d="M10 3.75a1.25 1.25 0 1 1 2.5 0V11h.75V5.25a1.25 1.25 0 1 1 2.5 0V11h.75V7.25a1.25 1.25 0 1 1 2.5 0V11h.75V9a1.25 1.25 0 1 1 2.5 0v6.5a5.5 5.5 0 0 1-5.5 5.5h-2.2a5 5 0 0 1-3.54-1.47L6.2 16.7a1.3 1.3 0 0 1 1.84-1.84l1.96 1.96V3.75z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Move</span>
             </button>
             <button
               type="button"
               className={`pb-mode${mode === 'group' ? ' active' : ''}`}
               onClick={() => setMode('group')}
             >
-              + Group area
+              <svg
+                className="pb-mode-icon"
+                viewBox="0 0 24 24"
+                width="16"
+                height="16"
+                aria-hidden="true"
+              >
+                {/* Marquee-selector: dashed rectangle with an arrow cursor in
+                    the lower-right corner, matching "draw a group area". */}
+                <g fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 5h3M10 5h4M17 5h3M4 19h3M20 8v3M20 14v3M4 8v3M4 14v3" />
+                </g>
+                <path
+                  d="M12 11.5l7 2.6-2.9 1-1 2.9-3.1-6.5z"
+                  fill="currentColor"
+                />
+              </svg>
+              <span>Add Group</span>
             </button>
           </div>
           <div className="pb-zoom-group" role="group" aria-label="Zoom">
