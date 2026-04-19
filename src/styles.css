@@ -1167,9 +1167,84 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   margin-top: 8px;
 }
 
-/* Home layout: collapsible feed sidebar on the left + full-bleed globe on the right.
-   The parent <main class="container-home"> is a flex row and fills the viewport
-   below the top bar, so panes below simply fill their share. */
+/* Home layout: a single full-window view that toggles between the Prayer Book
+   canvas (default) and the 3D Globe. The toggle pill sits in the top-right
+   corner, stacked above both views so it stays visible while switching. */
+.home-view {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  min-height: 0;
+  width: 100%;
+}
+/* Canvas view: the shared PrayerBookCanvas renders .pb-canvas directly, so
+   drop the rounded corners and inset border that make sense on the /book
+   page's padded container. On home it should read as edge-to-edge. */
+.home-view > .pb-canvas {
+  border-radius: 0;
+  border: 0;
+  min-height: 0;
+}
+/* Leave room on the right edge of the canvas toolbar so the view toggle
+   pill doesn't sit on top of the visibility filter group. */
+.home-view .pb-toolbar {
+  right: 200px;
+}
+.home-view .globe-pane {
+  flex: 1 1 auto;
+}
+
+.home-view-toggle {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 10;
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.home-view-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease;
+}
+.home-view-btn:hover {
+  background: var(--primary-soft);
+}
+.home-view-btn.active {
+  color: #fff;
+  background: var(--btn-gradient);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.28);
+}
+.home-view-btn.active:hover {
+  background: var(--btn-gradient);
+  filter: brightness(1.05);
+}
+@media (max-width: 720px) {
+  .home-view .pb-toolbar { right: 12px; }
+  .home-view-toggle {
+    top: auto;
+    bottom: 12px;
+    right: 50%;
+    transform: translateX(50%);
+  }
+}
+
+/* Legacy split layout retained for any future reuse — currently unused on
+   the home page since the feed sidebar was removed in favor of the canvas
+   view. */
 .home-split {
   display: flex;
   flex: 1 1 auto;
