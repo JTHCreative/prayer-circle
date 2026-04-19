@@ -894,9 +894,11 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 aria-label={`Edit group ${g.name}`}
                 title="Edit group"
               >
-                <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+                {/* Fountain-pen nib: ink tip at the top, barrel angled like a
+                    real pen so the icon reads as "write / edit" at a glance. */}
+                <svg viewBox="0 0 24 24" aria-hidden="true">
                   <path
-                    d="M4 17.25V20h2.75L17.81 8.94l-2.75-2.75L4 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
+                    d="M3 21l3.6-1 11.1-11.1-2.6-2.6L4 17.4 3 21zm16.7-14.3 1.6-1.6a1.5 1.5 0 0 0 0-2.1l-1.3-1.3a1.5 1.5 0 0 0-2.1 0l-1.6 1.6 3.4 3.4z"
                     fill="currentColor"
                   />
                 </svg>
@@ -911,7 +913,12 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 aria-label={`Remove group ${g.name}`}
                 title="Remove group"
               >
-                ×
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    d="M6.4 5 5 6.4 10.6 12 5 17.6 6.4 19l5.6-5.6 5.6 5.6 1.4-1.4L13.4 12 19 6.4 17.6 5 12 10.6z"
+                    fill="currentColor"
+                  />
+                </svg>
               </button>
               {['n', 's', 'e', 'w', 'nw', 'ne', 'sw', 'se'].map((dir) => (
                 <div
