@@ -1174,8 +1174,8 @@ label input, label textarea, label select { margin-top: 4px; font-weight: normal
   position: relative;
   flex: 1 1 auto;
   display: flex;
+  min-width: 0;
   min-height: 0;
-  width: 100%;
 }
 /* Canvas view: the shared PrayerBookCanvas renders .pb-canvas directly, so
    drop the rounded corners and inset border that make sense on the /book
