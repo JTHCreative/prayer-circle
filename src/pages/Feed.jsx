@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext.jsx';
 import Globe from '../components/Globe.jsx';
 import DailyVerseCard from '../components/DailyVerseCard.jsx';
 import PrayerCard from '../components/PrayerCard.jsx';
+import PrayerBookCanvas from '../components/PrayerBookCanvas.jsx';
 import { togglePraying } from '../utils/prayers.js';
 import { chunk } from '../utils/arrays.js';
 
@@ -32,6 +33,7 @@ export default function Feed() {
   const [prayers, setPrayers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [collapsed, setCollapsed] = useState(false);
+  const [view, setView] = useState('canvas');
   const togglingRef = useRef(new Set());
 
   useEffect(() => {
@@ -357,13 +359,37 @@ export default function Feed() {
         </div>
       </aside>
 
-      <section className="globe-pane" aria-label="Interactive globe">
-        <Globe />
-        <div className="globe-caption">
-          <span>🌍 Drag the globe to spin it</span>
+      <div className="home-view">
+        <div className="home-view-toggle" role="group" aria-label="Home view">
+          <button
+            type="button"
+            className={`home-view-btn${view === 'canvas' ? ' active' : ''}`}
+            onClick={() => setView('canvas')}
+            aria-pressed={view === 'canvas'}
+          >
+            Canvas View
+          </button>
+          <button
+            type="button"
+            className={`home-view-btn${view === 'globe' ? ' active' : ''}`}
+            onClick={() => setView('globe')}
+            aria-pressed={view === 'globe'}
+          >
+            Globe View
+          </button>
         </div>
-      </section>
+
+        {view === 'canvas' ? (
+          <PrayerBookCanvas />
+        ) : (
+          <section className="globe-pane" aria-label="Interactive globe">
+            <Globe />
+            <div className="globe-caption">
+              <span>🌍 Drag the globe to spin it</span>
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
-
