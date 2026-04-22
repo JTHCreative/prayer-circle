@@ -13,11 +13,14 @@ import {
 import { db } from '../firebase.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import PrayerBookCard from './PrayerBookCard.jsx';
+import CanvasTutorial from './CanvasTutorial.jsx';
 import { togglePraying } from '../utils/prayers.js';
 import {
   DEFAULT_GRADIENT_KEY,
   GRADIENT_PALETTES
 } from '../utils/circleGradients.js';
+
+const TUTORIAL_SEEN_KEY = 'pb:canvas:tutorialSeen';
 
 const GRADIENT_BY_KEY = Object.fromEntries(
   GRADIENT_PALETTES.map((g) => [g.key, g])
@@ -141,6 +144,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
   const [viewport, setViewport] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [editingGroup, setEditingGroup] = useState(null);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   const canvasRef = useRef(null);
   const contentRef = useRef(null);
@@ -271,6 +275,30 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
     (entry) => visibility === 'all' || entry.visibility === visibility,
     [visibility]
   );
+
+  // Auto-show the tutorial the first time a user lands on the canvas. We key
+  // the "seen" flag by uid so a second user on the same device still gets the
+  // tour, and we wait for the initial prayer-book load so optional steps that
+  // anchor to existing cards/groups can find their targets.
+  useEffect(() => {
+    if (!user?.uid || loading) return;
+    try {
+      if (localStorage.getItem(`${TUTORIAL_SEEN_KEY}:${user.uid}`)) return;
+    } catch {
+      return;
+    }
+    setShowTutorial(true);
+  }, [user?.uid, loading]);
+
+  const closeTutorial = useCallback(() => {
+    setShowTutorial(false);
+    if (!user?.uid) return;
+    try {
+      localStorage.setItem(`${TUTORIAL_SEEN_KEY}:${user.uid}`, '1');
+    } catch {
+      // storage unavailable — we'll just re-show the tour next session
+    }
+  }, [user?.uid]);
 
   useEffect(() => {
     if (entries.length === 0) return;
@@ -828,6 +856,26 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
               </button>
             ))}
           </div>
+          <button
+            type="button"
+            className="pb-help-btn"
+            onClick={() => setShowTutorial(true)}
+            aria-label="Canvas tutorial"
+            title="Canvas tutorial"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="1.8" />
+              <path
+                d="M9.2 9.3a2.9 2.9 0 0 1 5.6.9c0 1.4-1 1.9-1.8 2.4-.7.5-1 .9-1 1.7v.3"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+              />
+              <circle cx="12" cy="17.4" r="1" fill="currentColor" />
+            </svg>
+            <span>Help</span>
+          </button>
           {toolbarExtra}
         </div>
 
@@ -1049,6 +1097,13 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
             </form>
           </div>
         </div>
+      )}
+
+      {showTutorial && (
+        <CanvasTutorial
+          containerRef={canvasRef}
+          onClose={closeTutorial}
+        />
       )}
     </>
   );
