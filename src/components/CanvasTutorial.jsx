@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 
 // Each step either highlights an element inside the canvas (via CSS selector
 // resolved against `containerRef`) or, when `selector` is null, shows a
@@ -48,16 +48,14 @@ export const DEFAULT_CANVAS_TUTORIAL_STEPS = [
     title: 'Prayer cards',
     body:
       'Each card is a prayer you’ve saved. Add a card by tapping Pray in the feed; un-pray from the card itself to remove it.',
-    selector: '.pb-card-wrap',
-    optional: true
+    selector: '.pb-card-wrap'
   },
   {
     key: 'group-controls',
     title: 'Group controls',
     body:
       'Drag a group’s border to move all its cards with it. Resize from the corners, rename or recolor with the pen, or remove with the × button.',
-    selector: '.pb-group',
-    optional: true
+    selector: '.pb-group'
   },
   {
     key: 'help',
@@ -139,39 +137,58 @@ function pickSide(rect) {
 export default function CanvasTutorial({
   containerRef,
   steps = DEFAULT_CANVAS_TUTORIAL_STEPS,
+  onStepEnter,
   onClose
 }) {
-  const activeSteps = useMemo(() => {
-    const container = containerRef?.current || document;
-    return steps.filter((s) => {
-      if (!s.optional) return true;
-      if (!s.selector) return true;
-      return !!container.querySelector(s.selector);
-    });
-  }, [steps, containerRef]);
-
+  const activeSteps = steps;
   const [index, setIndex] = useState(0);
   const step = activeSteps[index] || activeSteps[activeSteps.length - 1];
+
+  // Notify the parent whenever the active step changes so it can prep the
+  // canvas (e.g. pan to the relevant card or seed a demo card/group when the
+  // user's book is empty). Runs once on mount for the first step too.
+  useEffect(() => {
+    if (step && onStepEnter) onStepEnter(step);
+  }, [step, onStepEnter]);
 
   const [rect, setRect] = useState(null);
 
   const recompute = useCallback(() => {
     if (!step || !step.selector) {
-      setRect(null);
+      setRect((prev) => (prev === null ? prev : null));
       return;
     }
     const container = containerRef?.current || document;
     const target = container.querySelector(step.selector);
     if (!target) {
-      setRect(null);
+      setRect((prev) => (prev === null ? prev : null));
       return;
     }
-    setRect(target.getBoundingClientRect());
+    const next = target.getBoundingClientRect();
+    setRect((prev) => {
+      if (
+        prev &&
+        prev.left === next.left &&
+        prev.top === next.top &&
+        prev.width === next.width &&
+        prev.height === next.height
+      ) {
+        return prev;
+      }
+      return next;
+    });
   }, [step, containerRef]);
 
   useLayoutEffect(() => {
     recompute();
   }, [recompute]);
+
+  // Also run after every render so the spotlight catches DOM updates driven
+  // by the parent (e.g. a demo card/group appearing, or a viewport pan) in
+  // the same frame instead of waiting for the interval poll.
+  useLayoutEffect(() => {
+    recompute();
+  });
 
   useEffect(() => {
     if (!step || !step.selector) return undefined;
