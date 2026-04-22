@@ -4014,3 +4014,23 @@ button.friends-network-search-person-btn:hover {
   }
 }
 
+/* Demo card / group rendered only while the tutorial is open to show users
+   what their own cards and groups will look like. Non-interactive — a
+   dashed outline and muted label quietly signal "this is an example". */
+.pb-card-wrap.is-demo {
+  pointer-events: none;
+  opacity: 0.95;
+}
+.pb-card-wrap.is-demo .pb-prayed-btn {
+  opacity: 0.6;
+}
+.pb-group.is-demo {
+  pointer-events: none;
+  border-style: dashed;
+}
+.pb-group.is-demo .pb-group-label::after {
+  content: ' · example';
+  font-weight: 400;
+  color: var(--muted);
+}
+

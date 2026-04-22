@@ -146,6 +146,14 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
   const [editingGroup, setEditingGroup] = useState(null);
   const [showTutorial, setShowTutorial] = useState(false);
 
+  // Demo items exist only for the duration of the tutorial. They render
+  // alongside the real ones so selectors like .pb-card-wrap and .pb-group
+  // can resolve on an empty canvas, but they're kept out of the persisted
+  // positions/groups state so we never write them to Firestore.
+  const [demoEntry, setDemoEntry] = useState(null);
+  const [demoGroup, setDemoGroup] = useState(null);
+  const [demoPosition, setDemoPosition] = useState(null);
+
   const canvasRef = useRef(null);
   const contentRef = useRef(null);
   const cardRefs = useRef({});
@@ -155,6 +163,14 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
   const groupDragRef = useRef(null);
   const resizeRef = useRef(null);
   const panRef = useRef(null);
+  const zoomRef = useRef(1);
+  const viewportRef = useRef({ x: 0, y: 0 });
+  useEffect(() => {
+    zoomRef.current = zoom;
+  }, [zoom]);
+  useEffect(() => {
+    viewportRef.current = viewport;
+  }, [viewport]);
   const togglingRef = useRef(new Set());
   const layoutReadyRef = useRef(false);
   const saveTimerRef = useRef(null);
@@ -292,6 +308,9 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
 
   const closeTutorial = useCallback(() => {
     setShowTutorial(false);
+    setDemoEntry(null);
+    setDemoGroup(null);
+    setDemoPosition(null);
     if (!user?.uid) return;
     try {
       localStorage.setItem(`${TUTORIAL_SEEN_KEY}:${user.uid}`, '1');
@@ -299,6 +318,132 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
       // storage unavailable — we'll just re-show the tour next session
     }
   }, [user?.uid]);
+
+  // Pan the viewport so a canvas-space rect is centered in the visible area.
+  // All measurements stay in canvas coordinates, then get converted to the
+  // translate applied to the content layer.
+  const centerViewportOn = useCallback((rect) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const cr = canvas.getBoundingClientRect();
+    const z = zoomRef.current;
+    const cx = (rect.x + rect.w / 2) * z;
+    const cy = (rect.y + rect.h / 2) * z;
+    const nextV = { x: cr.width / 2 - cx, y: cr.height / 2 - cy };
+    viewportRef.current = nextV;
+    setViewport(nextV);
+  }, []);
+
+  const isRectOnScreen = useCallback((rect) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return true;
+    const cr = canvas.getBoundingClientRect();
+    const z = zoomRef.current;
+    const v = viewportRef.current;
+    const left = v.x + rect.x * z;
+    const top = v.y + rect.y * z;
+    const right = left + rect.w * z;
+    const bottom = top + rect.h * z;
+    const pad = 40;
+    return (
+      right > pad &&
+      bottom > pad &&
+      left < cr.width - pad &&
+      top < cr.height - pad
+    );
+  }, []);
+
+  // When the tutorial enters a step that needs a visible card or group, we
+  // either pan to an existing one or seed a transient demo so the spotlight
+  // has something to highlight.
+  const handleTutorialStep = useCallback(
+    (step) => {
+      if (!step) return;
+      if (step.key === 'cards') {
+        const realPositioned = entries.find((e) => positions[e.id]);
+        if (realPositioned) {
+          const p = positions[realPositioned.id];
+          const rect = { x: p.x, y: p.y, w: CARD_W, h: CARD_H };
+          if (!isRectOnScreen(rect)) centerViewportOn(rect);
+          return;
+        }
+        if (demoEntry && demoPosition) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const cr = canvas.getBoundingClientRect();
+        const z = zoomRef.current;
+        const v = viewportRef.current;
+        const centerCanvasX = (cr.width / 2 - v.x) / z;
+        const centerCanvasY = (cr.height / 2 - v.y) / z;
+
+        const cardPos = {
+          x: centerCanvasX - CARD_W / 2,
+          y: centerCanvasY - CARD_H / 2
+        };
+        const groupRect = {
+          x: centerCanvasX - (CARD_W + 60) / 2,
+          y: centerCanvasY - (CARD_H + 80) / 2,
+          w: CARD_W + 60,
+          h: CARD_H + 80
+        };
+        setDemoEntry({
+          id: '__demo_card__',
+          text:
+            'Father, thank you for this quiet moment. Teach me to notice the small graces today and hold the people I love in Your light.',
+          visibility: 'public',
+          authorName: 'Example',
+          authorUsername: 'example',
+          demo: true
+        });
+        setDemoPosition(cardPos);
+        setDemoGroup({
+          id: '__demo_group__',
+          name: 'Morning prayers',
+          gradientKey: DEFAULT_GRADIENT_KEY,
+          ...groupRect,
+          demo: true
+        });
+      } else if (step.key === 'group-controls') {
+        if (groups.length > 0) {
+          const g = groups[0];
+          const rect = { x: g.x, y: g.y, w: g.w, h: g.h };
+          if (!isRectOnScreen(rect)) centerViewportOn(rect);
+          return;
+        }
+        if (demoGroup) {
+          const rect = {
+            x: demoGroup.x,
+            y: demoGroup.y,
+            w: demoGroup.w,
+            h: demoGroup.h
+          };
+          if (!isRectOnScreen(rect)) centerViewportOn(rect);
+          return;
+        }
+        // Reached from going directly to the group step before 'cards' seeded
+        // a demo — seed a group-only demo here.
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const cr = canvas.getBoundingClientRect();
+        const z = zoomRef.current;
+        const v = viewportRef.current;
+        const centerCanvasX = (cr.width / 2 - v.x) / z;
+        const centerCanvasY = (cr.height / 2 - v.y) / z;
+        setDemoGroup({
+          id: '__demo_group__',
+          name: 'Morning prayers',
+          gradientKey: DEFAULT_GRADIENT_KEY,
+          x: centerCanvasX - 180,
+          y: centerCanvasY - 120,
+          w: 360,
+          h: 240,
+          demo: true
+        });
+      }
+    },
+    [entries, positions, groups, demoEntry, demoGroup, demoPosition, centerViewportOn, isRectOnScreen]
+  );
 
   useEffect(() => {
     if (entries.length === 0) return;
@@ -680,15 +825,6 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
   const ZOOM_MIN = 0.4;
   const ZOOM_MAX = 2.5;
 
-  const zoomRef = useRef(zoom);
-  const viewportRef = useRef(viewport);
-  useEffect(() => {
-    zoomRef.current = zoom;
-  }, [zoom]);
-  useEffect(() => {
-    viewportRef.current = viewport;
-  }, [viewport]);
-
   function zoomAtPoint(nextZoom, anchorX, anchorY) {
     const curZ = zoomRef.current;
     const curV = viewportRef.current;
@@ -751,6 +887,16 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
     },
     [user]
   );
+
+  // Render lists include any transient tutorial demo items. They share the
+  // same DOM classes (.pb-card-wrap / .pb-group) so the tutorial spotlight
+  // can anchor to them without special-casing.
+  const renderedGroups = demoGroup ? [...groups, demoGroup] : groups;
+  const renderedEntries = demoEntry ? [...entries, demoEntry] : entries;
+  const renderedPositions =
+    demoEntry && demoPosition
+      ? { ...positions, [demoEntry.id]: demoPosition }
+      : positions;
 
   return (
     <>
@@ -896,24 +1042,26 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
             transform: `translate(${viewport.x}px, ${viewport.y}px) scale(${zoom})`
           }}
         >
-          {groups.map((g) => (
+          {renderedGroups.map((g) => {
+            const isDemo = g.demo === true;
+            return (
             <div
               key={g.id}
               ref={(el) => {
                 if (el) groupRefs.current[g.id] = el;
                 else delete groupRefs.current[g.id];
               }}
-              className="pb-group"
+              className={`pb-group${isDemo ? ' is-demo' : ''}`}
               style={{
                 transform: `translate(${g.x}px, ${g.y}px)`,
                 width: g.w,
                 height: g.h,
                 ...groupBorderStyle(g)
               }}
-              onPointerDown={(e) => handleGroupPointerDown(e, g)}
-              onPointerMove={handleGroupPointerMove}
-              onPointerUp={handleGroupPointerUp}
-              onPointerCancel={handleGroupPointerUp}
+              onPointerDown={isDemo ? undefined : (e) => handleGroupPointerDown(e, g)}
+              onPointerMove={isDemo ? undefined : handleGroupPointerMove}
+              onPointerUp={isDemo ? undefined : handleGroupPointerUp}
+              onPointerCancel={isDemo ? undefined : handleGroupPointerUp}
             >
               <button
                 type="button"
@@ -921,6 +1069,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 style={groupLabelStyle(g)}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isDemo) return;
                   setEditingGroup({
                     id: g.id,
                     name: g.name,
@@ -936,6 +1085,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 className="pb-group-edit"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isDemo) return;
                   setEditingGroup({
                     id: g.id,
                     name: g.name,
@@ -959,6 +1109,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 className="pb-group-remove"
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (isDemo) return;
                   removeGroup(g.id);
                 }}
                 aria-label={`Remove group ${g.name}`}
@@ -975,14 +1126,15 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                 <div
                   key={dir}
                   className={`pb-group-handle pb-group-handle-${dir}`}
-                  onPointerDown={(e) => handleResizePointerDown(e, g, dir)}
-                  onPointerMove={handleResizePointerMove}
-                  onPointerUp={handleResizePointerUp}
-                  onPointerCancel={handleResizePointerUp}
+                  onPointerDown={isDemo ? undefined : (e) => handleResizePointerDown(e, g, dir)}
+                  onPointerMove={isDemo ? undefined : handleResizePointerMove}
+                  onPointerUp={isDemo ? undefined : handleResizePointerUp}
+                  onPointerCancel={isDemo ? undefined : handleResizePointerUp}
                 />
               ))}
             </div>
-          ))}
+            );
+          })}
 
           {drawingGroup && (
             <div
@@ -995,11 +1147,12 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
             />
           )}
 
-          {entries.map((entry) => {
-            const pos = positions[entry.id];
+          {renderedEntries.map((entry) => {
+            const pos = renderedPositions[entry.id];
             if (!pos) return null;
             const tilt = tiltFor(entry.id);
-            const muted = !matchesFilter(entry);
+            const isDemo = entry.demo === true;
+            const muted = !isDemo && !matchesFilter(entry);
             return (
               <div
                 key={entry.id}
@@ -1007,22 +1160,22 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
                   if (el) cardRefs.current[entry.id] = el;
                   else delete cardRefs.current[entry.id];
                 }}
-                className={`pb-card-wrap${muted ? ' is-muted' : ''}${poppingIds.has(entry.id) ? ' is-popping' : ''}`}
+                className={`pb-card-wrap${muted ? ' is-muted' : ''}${poppingIds.has(entry.id) ? ' is-popping' : ''}${isDemo ? ' is-demo' : ''}`}
                 aria-hidden={muted || undefined}
                 style={{
                   transform: `translate(${pos.x}px, ${pos.y}px) rotate(${tilt}deg)`,
                   '--pb-tilt': `${tilt}deg`
                 }}
-                onPointerDown={(e) => handleCardPointerDown(e, entry.id)}
-                onPointerMove={handleCardPointerMove}
-                onPointerUp={handleCardPointerUp}
-                onPointerCancel={handleCardPointerUp}
+                onPointerDown={isDemo ? undefined : (e) => handleCardPointerDown(e, entry.id)}
+                onPointerMove={isDemo ? undefined : handleCardPointerMove}
+                onPointerUp={isDemo ? undefined : handleCardPointerUp}
+                onPointerCancel={isDemo ? undefined : handleCardPointerUp}
               >
                 <PrayerBookCard
                   prayer={entry}
                   currentUserId={user.uid}
                   tilt={0}
-                  onUnpray={() => handleUnpray(entry)}
+                  onUnpray={isDemo ? () => {} : () => handleUnpray(entry)}
                 />
               </div>
             );
@@ -1102,6 +1255,7 @@ export default function PrayerBookCanvas({ toolbarExtra = null }) {
       {showTutorial && (
         <CanvasTutorial
           containerRef={canvasRef}
+          onStepEnter={handleTutorialStep}
           onClose={closeTutorial}
         />
       )}
